@@ -1,5 +1,4 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Collapsible } from '@/components/ui/collapsible';
 import { ExternalLink } from '@/components/external-link';
@@ -12,12 +11,12 @@ import { Fonts } from '@/constants/theme';
 export default function TabTwoScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: '#D6E6F5', dark: '#1E2732' }}
       headerImage={
         <IconSymbol
           size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
+          color="#5B7997"
+          name="books.vertical"
           style={styles.headerImage}
         />
       }>
@@ -27,72 +26,73 @@ export default function TabTwoScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          Explore
+          Guia de implementação
+        </ThemedText>
+        <ThemedText>
+          Detalhes práticos para operacionalizar cada fonte litúrgica dentro do aplicativo.
         </ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
+
+      <Collapsible title="Recursos oficiais do Vaticano">
         <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
+          Orientamos o acesso direto ao portal{' '}
+          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
+            <ThemedText type="link">vatican.va</ThemedText>
+          </ExternalLink>{' '}
+          para consultar constituições apostólicas, homilias e documentos litúrgicos da Santa Sé,
+          preservando a experiência original publicada pelo Vaticano.
         </ThemedText>
         <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
+          As notícias em português do{' '}
+          <ExternalLink href="https://www.vaticannews.va/pt.html">
+            <ThemedText type="link">vaticannews.va</ThemedText>
+          </ExternalLink>{' '}
+          são abertas no navegador do dispositivo, evitando bloqueios de incorporação e seguindo as
+          diretrizes canônicas de uso dos portais oficiais.
         </ThemedText>
       </Collapsible>
-      <Collapsible title="Images">
+
+      <Collapsible title="Fluxo da Liturgia Diária (CNBB)">
         <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
+          Sincronização diária com{' '}
+          <ExternalLink href="https://liturgia.cnbb.org.br/">
+            <ThemedText type="link">liturgia.cnbb.org.br</ThemedText>
+          </ExternalLink>{' '}
+          garantindo que leituras, salmos e orações sigam a publicação oficial.
         </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
+        <ThemedText>
+          Implementamos cache local apenas para uso offline de curto prazo e exibimos aviso sobre a
+          procedência CNBB em todas as telas relacionadas.
+        </ThemedText>
       </Collapsible>
-      <Collapsible title="Light and dark mode components">
+
+      <Collapsible title="Santo do Dia com cache e créditos">
         <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
+          Dados carregados de portais autorizados (ex.:{' '}
+          <ExternalLink href="https://santo.cancaonova.com/">
+            <ThemedText type="link">Canção Nova</ThemedText>
+          </ExternalLink>
+          ) e armazenados por 24 horas. Após esse período, uma nova requisição é realizada e os
+          créditos são mantidos visíveis no card do santo.
         </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
+        <ThemedText>
+          Implementamos fallback para quando não há conteúdo atualizado, exibindo mensagem amigável
+          e link direto para a fonte.
+        </ThemedText>
       </Collapsible>
-      <Collapsible title="Animations">
+
+      <Collapsible title="Cadastro manual de horários de missa">
         <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
+          Como não existe API nacional, adotamos formulários de envio no aplicativo. As entradas
+          ficam associadas à paróquia e são revisadas antes da publicação.
         </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
+        <ThemedText>
+          Também oferecemos deep links para buscadores externos como{' '}
+          <ExternalLink href="https://www.horariodemissa.com.br/">
+            <ThemedText type="link">horariodemissa.com.br</ThemedText>
+          </ExternalLink>{' '}
+          e o aplicativo global Horários de Missa para complementar a busca do usuário.
+        </ThemedText>
       </Collapsible>
     </ParallaxScrollView>
   );
@@ -100,13 +100,12 @@ export default function TabTwoScreen() {
 
 const styles = StyleSheet.create({
   headerImage: {
-    color: '#808080',
+    color: '#5B7997',
     bottom: -90,
     left: -35,
     position: 'absolute',
   },
   titleContainer: {
-    flexDirection: 'row',
     gap: 8,
   },
 });
