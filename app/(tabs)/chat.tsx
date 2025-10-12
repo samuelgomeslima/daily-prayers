@@ -219,6 +219,7 @@ export default function ChatScreen() {
             data={messages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
+            style={styles.list}
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={headerComponent}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
@@ -275,7 +276,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  list: {
+    flex: 1,
+  },
   listContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
