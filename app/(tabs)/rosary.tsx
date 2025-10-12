@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { PrayerBeadTracker, type PrayerSequence } from '@/components/prayer-bead-tracker';
+import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -236,31 +237,11 @@ export default function RosaryScreen() {
           Mistérios do Santo Terço por dia
         </ThemedText>
         <ThemedText style={styles.sectionDescription}>
-          Consulte rapidamente quais mistérios contemplar em cada dia da semana e mantenha a
-          meditação unida às intenções da Igreja.
+          Selecione o conjunto correspondente ao dia e marque cada mistério à medida que avança
+          nas dezenas.
         </ThemedText>
 
-        {dailyMysteries.map((entry) => (
-          <ThemedView
-            key={entry.id}
-            style={styles.infoCard}
-            lightColor="#F5EFFA"
-            darkColor="#1F1527"
-          >
-            <ThemedText
-              type="subtitle"
-              style={[styles.infoTitle, { fontFamily: Fonts.serif }]}
-            >
-              {entry.title}
-            </ThemedText>
-            <ThemedText style={styles.infoDays}>{entry.days}</ThemedText>
-            {entry.mysteries.map((mystery) => (
-              <ThemedText key={mystery} style={styles.listItem}>
-                {mystery}
-              </ThemedText>
-            ))}
-          </ThemedView>
-        ))}
+        <RosaryMysteryTracker sets={dailyMysteries} />
       </ThemedView>
 
       <ThemedView style={styles.section}>
@@ -338,20 +319,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   sectionDescription: {
-    lineHeight: 22,
-  },
-  infoCard: {
-    padding: 18,
-    borderRadius: 16,
-    gap: 8,
-  },
-  infoTitle: {
-    fontSize: 18,
-  },
-  infoDays: {
-    fontWeight: '600',
-  },
-  listItem: {
     lineHeight: 22,
   },
   prayerCard: {
