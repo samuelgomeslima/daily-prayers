@@ -34,22 +34,26 @@ export default function HomeScreen() {
         </ThemedText>
       </ThemedView>
 
-      <FeatureCard title="Liturgia das Horas / Leituras (iBreviary)">
+      <FeatureCard title="Documentos e Liturgia (Vaticano)">
         <ThemedText style={styles.cardText}>
-          Utilizamos o iBreviary incorporado por WebView para garantir acesso imediato e
-          autorizado às Horas e Leituras diárias em português enquanto os acordos finais
-          são formalizados.
+          Incorporamos o portal oficial do Vaticano para acesso direto às constituições,
+          homilias e textos litúrgicos publicados pela Santa Sé. Todo o conteúdo é
+          consumido via WebView preservando a formatação e os avisos canônicos.
         </ThemedText>
         <ThemedText style={styles.cardText}>
-          Mantemos o layout original dentro do app e sinalizamos a fonte oficial para
-          reforçar a licença concedida pelo projeto iBreviary.
+          Também disponibilizamos um atalho para as notícias em português do Vatican News
+          com atualização contínua do Vaticano. Ambos os canais estão acessíveis dentro do
+          aplicativo ou no navegador.
         </ThemedText>
         <View style={styles.actions}>
-          <Link href="/ibreviary" style={styles.actionLink}>
-            <ThemedText type="link">Abrir iBreviary integrado</ThemedText>
+          <Link href="/vatican" style={styles.actionLink}>
+            <ThemedText type="link">Abrir recursos do Vaticano</ThemedText>
           </Link>
-          <ExternalLink href="https://www.ibreviary.org">
-            <ThemedText type="link">Site do iBreviary</ThemedText>
+          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
+            <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
+          </ExternalLink>
+          <ExternalLink href="https://www.vaticannews.va/pt.html">
+            <ThemedText type="link">Vatican News em português</ThemedText>
           </ExternalLink>
         </View>
       </FeatureCard>

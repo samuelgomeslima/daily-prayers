@@ -33,20 +33,23 @@ export default function TabTwoScreen() {
         </ThemedText>
       </ThemedView>
 
-      <Collapsible title="Embed do iBreviary">
+      <Collapsible title="Recursos oficiais do Vaticano">
         <ThemedText>
-          A tela <ThemedText type="defaultSemiBold">/ibreviary</ThemedText> utiliza um{' '}
-          <ThemedText type="defaultSemiBold">WebView</ThemedText> dedicado com{' '}
-          <ThemedText type="defaultSemiBold">startInLoadingState</ThemedText> ativado para
-          carregar o conteúdo autorizado diretamente de{' '}
-          <ExternalLink href="https://www.ibreviary.org">
-            <ThemedText type="link">ibreviary.org</ThemedText>
+          A tela <ThemedText type="defaultSemiBold">/vatican</ThemedText> reúne dois{' '}
+          <ThemedText type="defaultSemiBold">WebViews</ThemedText> com alternância rápida entre o
+          portal{' '}
+          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
+            <ThemedText type="link">vatican.va</ThemedText>
+          </ExternalLink>{' '}
+          e as notícias em português do{' '}
+          <ExternalLink href="https://www.vaticannews.va/pt.html">
+            <ThemedText type="link">vaticannews.va</ThemedText>
           </ExternalLink>
-          . O cabeçalho contextualiza a parceria e mantém acesso rápido ao site oficial.
+          . Ambos preservam a diagramação original e exibem um indicador de carregamento nativo.
         </ThemedText>
         <ThemedText>
-          Em ambientes web, usamos um <ThemedText type="defaultSemiBold">iframe</ThemedText> com as
-          mesmas dimensões para preservar a experiência.
+          Em ambientes web, utilizamos <ThemedText type="defaultSemiBold">iframes</ThemedText> com
+          as mesmas dimensões para manter a consistência visual.
         </ThemedText>
       </Collapsible>
 
