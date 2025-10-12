@@ -224,6 +224,8 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               </ThemedText>
             )}
           </Pressable>
+        </View>
+        <View style={styles.flowSection}>
           <View style={styles.flowControls}>
             <Pressable
               onPress={undoLastBead}
@@ -453,7 +455,10 @@ const styles = StyleSheet.create({
   flowControls: {
     flexDirection: 'row',
     gap: 12,
+  },
+  flowSection: {
     marginTop: 12,
+    gap: 12,
   },
   flowButton: {
     flex: 1,
