@@ -52,17 +52,17 @@ export default function TabTwoScreen() {
         </ThemedText>
       </Collapsible>
 
-      <Collapsible title="Fluxo da Liturgia Diária (CNBB)">
+      <Collapsible title="Fluxo da Liturgia Diária (Canção Nova)">
         <ThemedText>
           Sincronização diária com{' '}
-          <ExternalLink href="https://liturgia.cnbb.org.br/">
-            <ThemedText type="link">liturgia.cnbb.org.br</ThemedText>
+          <ExternalLink href="https://liturgia.cancaonova.com/pb/">
+            <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
           </ExternalLink>{' '}
-          garantindo que leituras, salmos e orações sigam a publicação oficial.
+          garantindo que leituras, salmos e orações sigam a publicação oficial disponibilizada pela comunidade Canção Nova.
         </ThemedText>
         <ThemedText>
           Implementamos cache local apenas para uso offline de curto prazo e exibimos aviso sobre a
-          procedência CNBB em todas as telas relacionadas.
+          procedência da fonte em todas as telas relacionadas.
         </ThemedText>
       </Collapsible>
 
@@ -87,11 +87,16 @@ export default function TabTwoScreen() {
           ficam associadas à paróquia e são revisadas antes da publicação.
         </ThemedText>
         <ThemedText>
-          Também oferecemos deep links para buscadores externos como{' '}
-          <ExternalLink href="https://www.horariodemissa.com.br/">
-            <ThemedText type="link">horariodemissa.com.br</ThemedText>
+          Também oferecemos deep links para os guias oficiais da Arquidiocese de Belo Horizonte,
+          com horários publicados em{' '}
+          <ExternalLink href="https://www.missadiariabh.com/missadiaria">
+            <ThemedText type="link">missadiariabh.com/missadiaria</ThemedText>
           </ExternalLink>{' '}
-          e o aplicativo global Horários de Missa para complementar a busca do usuário.
+          e as agendas de confissões em{' '}
+          <ExternalLink href="https://www.missadiariabh.com/confissoes">
+            <ThemedText type="link">missadiariabh.com/confissoes</ThemedText>
+          </ExternalLink>{' '}
+          para complementar a busca do usuário.
         </ThemedText>
       </Collapsible>
     </ParallaxScrollView>

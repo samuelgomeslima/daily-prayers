@@ -56,18 +56,16 @@ export default function HomeScreen() {
 
       <FeatureCard title="Liturgia Diária (Brasil)">
         <ThemedText style={styles.cardText}>
-          Referência primária fornecida pela CNBB. Todo conteúdo diário é validado contra a
-          publicação oficial ({' '}
-          <ExternalLink href="https://liturgia.cnbb.org.br/">
-            <ThemedText type="link">Liturgia Diária CNBB</ThemedText>
+          Conteúdo sincronizado com o portal da Canção Nova, garantindo acesso às leituras,
+          salmos e orações publicados em{' '}
+          <ExternalLink href="https://liturgia.cancaonova.com/pb/">
+            <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
           </ExternalLink>
-          {' '}
-          ) e quaisquer APIs próprias são desenvolvidas apenas com autorização formal da
-          conferência episcopal.
+          . Respeitamos o formato original exibindo o link oficial em todas as sessões do app.
         </ThemedText>
         <ThemedText style={styles.cardNote}>
           • Conteúdo armazenado localmente apenas para leitura offline temporária, sempre
-          com sincronização diária direta da fonte oficial.
+          com sincronização direta diária da fonte oficial.
         </ThemedText>
       </FeatureCard>
 
@@ -90,20 +88,20 @@ export default function HomeScreen() {
 
       <FeatureCard title="Horários de Missas e Confissões">
         <ThemedText style={styles.cardText}>
-          Não há API nacional unificada. Adotamos cadastro manual colaborativo dentro do
-          app e oferecemos atalhos para buscadores consolidados para ampliar a cobertura.
+          Não há API nacional unificada. Mantemos cadastro manual colaborativo e indicamos o
+          guia atualizado da Arquidiocese de Belo Horizonte para ampliar a cobertura.
         </ThemedText>
         <View style={styles.actions}>
-          <ExternalLink href="https://www.horariodemissa.com.br/">
-            <ThemedText type="link">horariodemissa.com.br</ThemedText>
+          <ExternalLink href="https://www.missadiariabh.com/missadiaria">
+            <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
           </ExternalLink>
-          <ExternalLink href="https://apps.apple.com/br/app/hor%C3%A1rios-de-missa/id1381090076">
-            <ThemedText type="link">App Horários de Missa (global)</ThemedText>
+          <ExternalLink href="https://www.missadiariabh.com/confissoes">
+            <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
           </ExternalLink>
         </View>
         <ThemedText style={styles.cardNote}>
-          • Fichas cadastradas pela comunidade contam com revisão editorial e deep links
-          abrem pesquisas externas quando necessário.
+          • Fichas cadastradas pela comunidade contam com revisão editorial, e os deep links
+          levam direto aos horários oficiais mantidos pela arquidiocese.
         </ThemedText>
       </FeatureCard>
     </ParallaxScrollView>
