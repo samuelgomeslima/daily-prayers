@@ -35,21 +35,20 @@ export default function TabTwoScreen() {
 
       <Collapsible title="Recursos oficiais do Vaticano">
         <ThemedText>
-          A tela <ThemedText type="defaultSemiBold">/vatican</ThemedText> reúne dois{' '}
-          <ThemedText type="defaultSemiBold">WebViews</ThemedText> com alternância rápida entre o
-          portal{' '}
+          Orientamos o acesso direto ao portal{' '}
           <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
             <ThemedText type="link">vatican.va</ThemedText>
           </ExternalLink>{' '}
-          e as notícias em português do{' '}
-          <ExternalLink href="https://www.vaticannews.va/pt.html">
-            <ThemedText type="link">vaticannews.va</ThemedText>
-          </ExternalLink>
-          . Ambos preservam a diagramação original e exibem um indicador de carregamento nativo.
+          para consultar constituições apostólicas, homilias e documentos litúrgicos da Santa Sé,
+          preservando a experiência original publicada pelo Vaticano.
         </ThemedText>
         <ThemedText>
-          Em ambientes web, utilizamos <ThemedText type="defaultSemiBold">iframes</ThemedText> com
-          as mesmas dimensões para manter a consistência visual.
+          As notícias em português do{' '}
+          <ExternalLink href="https://www.vaticannews.va/pt.html">
+            <ThemedText type="link">vaticannews.va</ThemedText>
+          </ExternalLink>{' '}
+          são abertas no navegador do dispositivo, evitando bloqueios de incorporação e seguindo as
+          diretrizes canônicas de uso dos portais oficiais.
         </ThemedText>
       </Collapsible>
 
