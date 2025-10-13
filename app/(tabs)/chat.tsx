@@ -202,11 +202,17 @@ export default function ChatScreen() {
     ({ item }: { item: ChatMessage }) => {
       const isUser = item.role === 'user';
       const backgroundColor = isUser
-        ? palette.tint
+        ? colorScheme === 'dark'
+          ? '#2563eb'
+          : palette.tint
         : colorScheme === 'dark'
-          ? '#1f2835'
+          ? '#1f2937'
           : '#f1f5f9';
-      const textColor = isUser ? '#fff' : palette.text;
+      const textColor = isUser
+        ? '#fff'
+        : colorScheme === 'dark'
+          ? '#e2e8f0'
+          : palette.text;
 
       return (
         <View style={[styles.messageWrapper, isUser ? styles.messageRight : styles.messageLeft]}>
@@ -299,14 +305,26 @@ export default function ChatScreen() {
               style={({ pressed }) => [
                 styles.sendButton,
                 {
-                  backgroundColor: isSending ? '#94a3b8' : palette.tint,
-                  opacity: pressed ? 0.85 : 1,
+                  backgroundColor: isSending
+                    ? colorScheme === 'dark'
+                      ? '#1d4ed8'
+                      : '#94a3b8'
+                    : colorScheme === 'dark'
+                      ? '#2563eb'
+                      : palette.tint,
+                  opacity: pressed ? 0.9 : 1,
                 },
               ]}>
               {isSending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText style={styles.sendButtonText}>Enviar</ThemedText>
+                <ThemedText
+                  style={[
+                    styles.sendButtonText,
+                    { color: colorScheme === 'dark' ? '#f8fafc' : '#fff' },
+                  ]}>
+                  Enviar
+                </ThemedText>
               )}
             </Pressable>
           </View>
