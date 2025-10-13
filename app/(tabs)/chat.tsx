@@ -34,6 +34,41 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 const SYSTEM_PROMPT = `Você é um assistente católico chamado "Companheiro de Fé". Responda sempre com fidelidade ao magistério da Igreja, cite referências litúrgicas quando possível e ofereça sugestões de orações, novenas, terços e estudos de aprofundamento. Traga indicações pastorais com tom acolhedor e respeitoso.`;
 
+const resolveExpoHost = () => {
+  const extractHost = (raw?: string | null) => {
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const value = raw.includes('://') ? raw : `http://${raw}`;
+      return new URL(value).hostname;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const candidates = [
+    Constants.expoConfig?.extra?.expoGo?.debuggerHost,
+    Constants.manifest2?.extra?.expoGo?.debuggerHost,
+    Constants.manifest?.debuggerHost,
+    Constants.expoConfig?.hostUri,
+    Constants.expoConfig?.extra?.expoGo?.hostUri,
+    Constants.manifest2?.extra?.expoGo?.hostUri,
+    Constants.manifest?.hostUri,
+  ];
+
+  for (const candidate of candidates) {
+    const host = extractHost(candidate);
+
+    if (host) {
+      return host;
+    }
+  }
+
+  return null;
+};
+
 const CHAT_ENDPOINT = (() => {
   if (process.env.EXPO_OS === 'web') {
     return '/api/chat';
@@ -55,18 +90,10 @@ const CHAT_ENDPOINT = (() => {
     return new URL('/api/chat', envBaseUrl).toString();
   }
 
-  const hostUri =
-    Constants.expoConfig?.hostUri ??
-    Constants.manifest2?.extra?.expoGo?.debuggerHost ??
-    Constants.manifest?.debuggerHost ??
-    '';
+  const host = resolveExpoHost();
 
-  if (hostUri) {
-    const [host] = hostUri.split(':');
-
-    if (host) {
-      return `http://${host}:4280/api/chat`;
-    }
+  if (host) {
+    return `http://${host}:4280/api/chat`;
   }
 
   return null;
