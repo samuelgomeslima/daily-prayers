@@ -10,7 +10,18 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Configure the chat proxy endpoint
+
+   Copy the example environment file and update `EXPO_PUBLIC_CHAT_BASE_URL` with the full URL of your deployed Static Web App (e.g. `https://white-ground-0a882961e.1.azurestaticapps.net/`).
+
+   ```bash
+   cp .env.example .env
+   # then edit .env and set EXPO_PUBLIC_CHAT_BASE_URL
+   ```
+
+   > [!TIP] > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
+
+3. Start the app
 
    ```bash
    npx expo start

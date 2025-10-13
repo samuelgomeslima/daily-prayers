@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -33,7 +34,43 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 const SYSTEM_PROMPT = `Você é um assistente católico chamado "Companheiro de Fé". Responda sempre com fidelidade ao magistério da Igreja, cite referências litúrgicas quando possível e ofereça sugestões de orações, novenas, terços e estudos de aprofundamento. Traga indicações pastorais com tom acolhedor e respeitoso.`;
 
-const CHAT_ENDPOINT = '/api/chat';
+const CHAT_ENDPOINT = (() => {
+  if (process.env.EXPO_OS === 'web') {
+    return '/api/chat';
+  }
+
+  const envBaseUrl =
+    process.env.EXPO_PUBLIC_CHAT_BASE_URL ??
+    process.env.EXPO_PUBLIC_API_BASE_URL ??
+    process.env.EXPO_PUBLIC_SITE_URL ??
+    Constants.expoConfig?.extra?.chatBaseUrl ??
+    Constants.expoConfig?.extra?.apiBaseUrl ??
+    Constants.manifest2?.extra?.chatBaseUrl ??
+    Constants.manifest2?.extra?.apiBaseUrl ??
+    Constants.manifest?.extra?.chatBaseUrl ??
+    Constants.manifest?.extra?.apiBaseUrl ??
+    '';
+
+  if (envBaseUrl) {
+    return new URL('/api/chat', envBaseUrl).toString();
+  }
+
+  const hostUri =
+    Constants.expoConfig?.hostUri ??
+    Constants.manifest2?.extra?.expoGo?.debuggerHost ??
+    Constants.manifest?.debuggerHost ??
+    '';
+
+  if (hostUri) {
+    const [host] = hostUri.split(':');
+
+    if (host) {
+      return `http://${host}:4280/api/chat`;
+    }
+  }
+
+  return null;
+})();
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -49,6 +86,15 @@ export default function ChatScreen() {
     const trimmed = input.trim();
 
     if (!trimmed) {
+      return;
+    }
+    
+    const endpoint = CHAT_ENDPOINT;
+
+    if (!endpoint) {
+      setError(
+        'Configuração ausente: defina EXPO_PUBLIC_CHAT_BASE_URL apontando para sua Static Web App para usar o chat nos apps nativos.'
+      );
       return;
     }
 
@@ -70,7 +116,7 @@ export default function ChatScreen() {
         { role: 'user', content: trimmed },
       ];
 
-      const response = await fetch(CHAT_ENDPOINT, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
