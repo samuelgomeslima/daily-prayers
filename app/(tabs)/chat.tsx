@@ -33,11 +33,10 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 const SYSTEM_PROMPT = `Você é um assistente católico chamado "Companheiro de Fé". Responda sempre com fidelidade ao magistério da Igreja, cite referências litúrgicas quando possível e ofereça sugestões de orações, novenas, terços e estudos de aprofundamento. Traga indicações pastorais com tom acolhedor e respeitoso.`;
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const CHAT_ENDPOINT = '/api/chat';
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme() ?? 'light';
-  const [apiKey, setApiKey] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -50,11 +49,6 @@ export default function ChatScreen() {
     const trimmed = input.trim();
 
     if (!trimmed) {
-      return;
-    }
-
-    if (!apiKey.trim()) {
-      setError('Informe sua OpenAI API key antes de enviar mensagens.');
       return;
     }
 
@@ -76,14 +70,12 @@ export default function ChatScreen() {
         { role: 'user', content: trimmed },
       ];
 
-      const response = await fetch(OPENAI_URL, {
+      const response = await fetch(CHAT_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
           messages: payloadMessages,
           temperature: 0.6,
         }),
@@ -125,13 +117,13 @@ export default function ChatScreen() {
           id: `${Date.now()}-assistant-error`,
           role: 'assistant',
           content:
-            'Enfrentei um problema ao tentar responder. Confira sua chave de API e sua conexão, depois envie novamente.',
+            'Enfrentei um problema ao tentar responder. Confira sua conexão e tente novamente em instantes.',
         },
       ]);
     } finally {
       setIsSending(false);
     }
-  }, [apiKey, input, messages]);
+  }, [input, messages]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
@@ -170,41 +162,20 @@ export default function ChatScreen() {
           novenas, meditações ou orientações para aprofundar seus estudos. As respostas são baseadas
           no magistério da Igreja e em documentos oficiais.
         </ThemedText>
+        <ThemedText style={styles.description}>
+          As mensagens são enviadas com segurança aos nossos servidores, que utilizam a chave de API
+          configurada no Azure Static Web Apps para consultar a OpenAI em seu nome.
+        </ThemedText>
         <View
           style={[
             styles.divider,
             { backgroundColor: colorScheme === 'dark' ? '#1f2937' : '#e2e8f0' },
           ]}
         />
-        <View style={styles.apiKeyBlock}>
-          <ThemedText type="subtitle" style={styles.apiKeyTitle}>
-            Sua OpenAI API key
-          </ThemedText>
-          <ThemedText style={styles.apiKeyInfo}>
-            A chave é utilizada apenas nesta sessão do aplicativo. Você pode gerar uma em platform.openai.com.
-          </ThemedText>
-          <TextInput
-            value={apiKey}
-            onChangeText={setApiKey}
-            secureTextEntry
-            placeholder="sk-..."
-            placeholderTextColor={colorScheme === 'dark' ? '#64748b' : '#94a3b8'}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={[
-              styles.apiKeyInput,
-              {
-                borderColor: colorScheme === 'dark' ? '#1f2937' : '#cbd5f5',
-                backgroundColor: colorScheme === 'dark' ? '#111827' : '#fff',
-                color: colorScheme === 'dark' ? '#f8fafc' : palette.text,
-              },
-            ]}
-          />
-        </View>
         {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
       </View>
     ),
-    [apiKey, colorScheme, error, palette.text]
+    [colorScheme, error]
   );
 
   return (
@@ -298,23 +269,6 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#e2e8f0',
-  },
-  apiKeyBlock: {
-    gap: 8,
-  },
-  apiKeyTitle: {
-    fontSize: 18,
-  },
-  apiKeyInfo: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  apiKeyInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
   },
   errorText: {
     color: '#ef4444',
