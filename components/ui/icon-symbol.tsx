@@ -20,6 +20,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'circle.grid.3x3.fill': 'apps',
   'bubble.left.and.bubble.right.fill': 'forum',
+  'book.fill': 'menu-book',
 } as IconMapping;
 
 /**
