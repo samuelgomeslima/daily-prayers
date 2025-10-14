@@ -78,6 +78,7 @@ app.http('catechistAgent', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${OPENAI_API_KEY}`,
+          'OpenAI-Beta': 'responses=v1',
         },
         body: JSON.stringify(payload),
       });
