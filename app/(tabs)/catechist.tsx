@@ -23,16 +23,39 @@ type ChatMessage = {
   content: string;
 };
 
+type CatechistResponse = {
+  id?: string;
+  conversation?: { id?: string } | null;
+  conversation_id?: string;
+  output?:
+    | null
+    | {
+        type?: string;
+        role?: string;
+        content?:
+          | null
+          | {
+              type?: string;
+              text?: string;
+              value?: string;
+            }[];
+        text?: string;
+      }[];
+  output_text?: string;
+  response?: {
+    conversation_id?: string;
+    output_text?: string;
+  };
+};
+
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: 'welcome',
     role: 'assistant',
     content:
-      'Paz e bem! Sou seu acompanhante espiritual digital. Posso sugerir orações, indicar novenas, explicar trechos da liturgia e orientar estudos católicos conforme o magistério da Igreja.',
+      'Paz e bem! Sou o Assistente Catequista, treinado com base no livro “A Fé Explicada”. Faça suas perguntas sobre a fé católica e indique como deseja aprofundar seus estudos.',
   },
 ];
-
-const SYSTEM_PROMPT = `Você é um assistente católico chamado "Companheiro de Fé". Responda sempre com fidelidade ao magistério da Igreja, cite referências litúrgicas quando possível e ofereça sugestões de orações, novenas, terços e estudos de aprofundamento. Traga indicações pastorais com tom acolhedor e respeitoso.`;
 
 const resolveExpoHost = () => {
   const extractHost = (raw?: string | null) => {
@@ -69,42 +92,94 @@ const resolveExpoHost = () => {
   return null;
 };
 
-const CHAT_ENDPOINT = (() => {
+const CATECHIST_ENDPOINT = (() => {
   if (process.env.EXPO_OS === 'web') {
-    return '/api/chat';
+    return '/api/catechist-agent';
   }
 
   const envBaseUrl =
+    process.env.EXPO_PUBLIC_CATECHIST_BASE_URL ??
     process.env.EXPO_PUBLIC_CHAT_BASE_URL ??
     process.env.EXPO_PUBLIC_API_BASE_URL ??
     process.env.EXPO_PUBLIC_SITE_URL ??
+    Constants.expoConfig?.extra?.catechistBaseUrl ??
     Constants.expoConfig?.extra?.chatBaseUrl ??
     Constants.expoConfig?.extra?.apiBaseUrl ??
+    Constants.manifest2?.extra?.catechistBaseUrl ??
     Constants.manifest2?.extra?.chatBaseUrl ??
     Constants.manifest2?.extra?.apiBaseUrl ??
+    Constants.manifest?.extra?.catechistBaseUrl ??
     Constants.manifest?.extra?.chatBaseUrl ??
     Constants.manifest?.extra?.apiBaseUrl ??
     '';
 
   if (envBaseUrl) {
-    return new URL('/api/chat', envBaseUrl).toString();
+    return new URL('/api/catechist-agent', envBaseUrl).toString();
   }
 
   const host = resolveExpoHost();
 
   if (host) {
-    return `http://${host}:4280/api/chat`;
+    return `http://${host}:4280/api/catechist-agent`;
   }
 
   return null;
 })();
 
-export default function ChatScreen() {
+const extractAssistantText = (payload: CatechistResponse) => {
+  if (!payload) {
+    return null;
+  }
+
+  const textSegments: string[] = [];
+
+  if (Array.isArray(payload.output)) {
+    for (const segment of payload.output) {
+      if (segment?.type === 'message' && Array.isArray(segment.content)) {
+        for (const content of segment.content) {
+          if (typeof content?.text === 'string') {
+            textSegments.push(content.text);
+          } else if (typeof content?.value === 'string') {
+            textSegments.push(content.value);
+          }
+        }
+      } else if (typeof segment?.text === 'string') {
+        textSegments.push(segment.text);
+      }
+    }
+  }
+
+  if (textSegments.length > 0) {
+    return textSegments.join('\n').trim();
+  }
+
+  if (typeof payload.output_text === 'string' && payload.output_text.trim().length > 0) {
+    return payload.output_text.trim();
+  }
+
+  if (typeof payload.response?.output_text === 'string' && payload.response.output_text.trim().length > 0) {
+    return payload.response.output_text.trim();
+  }
+
+  return null;
+};
+
+const extractConversationId = (payload: CatechistResponse) => {
+  return (
+    payload?.conversation?.id ??
+    payload?.conversation_id ??
+    payload?.response?.conversation_id ??
+    null
+  );
+};
+
+export default function CatechistScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const palette = Colors[colorScheme];
@@ -115,12 +190,12 @@ export default function ChatScreen() {
     if (!trimmed) {
       return;
     }
-    
-    const endpoint = CHAT_ENDPOINT;
+
+    const endpoint = CATECHIST_ENDPOINT;
 
     if (!endpoint) {
       setError(
-        'Configuração ausente: defina EXPO_PUBLIC_CHAT_BASE_URL apontando para sua Static Web App para usar o chat nos apps nativos.'
+        'Configuração ausente: defina EXPO_PUBLIC_CATECHIST_BASE_URL ou EXPO_PUBLIC_CHAT_BASE_URL apontando para sua Static Web App para usar o assistente catequista nos apps nativos.'
       );
       return;
     }
@@ -137,38 +212,29 @@ export default function ChatScreen() {
     setError(null);
 
     try {
-      const payloadMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...messages.map((message) => ({ role: message.role, content: message.content })),
-        { role: 'user', content: trimmed },
-      ];
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: payloadMessages,
-          temperature: 0.6,
+          message: trimmed,
+          conversationId: conversationId ?? undefined,
         }),
       });
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null);
         const message =
-          errorPayload?.error?.message ?? 'Não foi possível obter uma resposta no momento.';
+          errorPayload?.error?.message ?? 'Não foi possível obter uma resposta do Assistente Catequista no momento.';
         throw new Error(message);
       }
 
-      const data: {
-        choices?: { message?: { content?: string } }[];
-      } = await response.json();
-
-      const assistantText = data.choices?.[0]?.message?.content?.trim();
+      const data: CatechistResponse = await response.json();
+      const assistantText = extractAssistantText(data);
 
       if (!assistantText) {
-        throw new Error('A resposta da IA veio vazia. Tente novamente em instantes.');
+        throw new Error('A resposta do Assistente Catequista veio vazia. Tente novamente em instantes.');
       }
 
       const assistantMessage: ChatMessage = {
@@ -178,11 +244,16 @@ export default function ChatScreen() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      const newConversationId = extractConversationId(data);
+      if (newConversationId) {
+        setConversationId(newConversationId);
+      }
     } catch (sendError) {
       const friendlyMessage =
         sendError instanceof Error
           ? sendError.message
-          : 'Ocorreu um erro inesperado ao contatar a IA.';
+          : 'Ocorreu um erro inesperado ao contatar o Assistente Catequista.';
       setError(friendlyMessage);
       setMessages((prev) => [
         ...prev,
@@ -196,18 +267,18 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [input, messages]);
+  }, [conversationId, input]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
       const isUser = item.role === 'user';
       const backgroundColor = isUser
         ? colorScheme === 'dark'
-          ? '#2563eb'
+          ? '#1d4ed8'
           : palette.tint
         : colorScheme === 'dark'
           ? '#1f2937'
-          : '#f1f5f9';
+          : '#f8fafc';
       const textColor = isUser
         ? '#fff'
         : colorScheme === 'dark'
@@ -216,9 +287,9 @@ export default function ChatScreen() {
 
       return (
         <View style={[styles.messageWrapper, isUser ? styles.messageRight : styles.messageLeft]}>
-          <View style={[styles.messageBubble, { backgroundColor }]}> 
+          <View style={[styles.messageBubble, { backgroundColor }]}>
             <ThemedText style={[styles.messageAuthor, { color: textColor }]} type="defaultSemiBold">
-              {isUser ? 'Você' : 'Companheiro de Fé'}
+              {isUser ? 'Você' : 'Assistente Catequista'}
             </ThemedText>
             <ThemedText style={[styles.messageContent, { color: textColor }]}>
               {item.content}
@@ -234,17 +305,26 @@ export default function ChatScreen() {
     () => (
       <View style={styles.header}>
         <ThemedText type="title" style={styles.title}>
-          Companheiro de Fé
+          Assistente Catequista
         </ThemedText>
         <ThemedText style={styles.description}>
-          Converse com uma IA especializada em espiritualidade católica. Peça sugestões de orações,
-          novenas, meditações ou orientações para aprofundar seus estudos. As respostas são baseadas
-          no magistério da Igreja e em documentos oficiais.
+          Integre o agente criado na sua conta OpenAI para responder dúvidas sobre a fé católica com base no livro “A Fé Explicada”.
         </ThemedText>
-        <ThemedText style={styles.description}>
-          As mensagens são enviadas com segurança aos nossos servidores, que utilizam a chave de API
-          configurada no Azure Static Web Apps para consultar a OpenAI em seu nome.
-        </ThemedText>
+        <View style={styles.instructions}>
+          <ThemedText type="defaultSemiBold">Como configurar</ThemedText>
+          <ThemedText style={styles.description}>
+            1. No portal do OpenAI, copie o <ThemedText type="defaultSemiBold">ID do agente</ThemedText> que você criou (Assistants → seu agente → “Agent ID”).
+          </ThemedText>
+          <ThemedText style={styles.description}>
+            2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis <ThemedText type="defaultSemiBold">OPENAI_API_KEY</ThemedText> e <ThemedText type="defaultSemiBold">OPENAI_CATECHIST_AGENT_ID</ThemedText> com os valores correspondentes.
+          </ThemedText>
+          <ThemedText style={styles.description}>
+            3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CATECHIST_BASE_URL</ThemedText> (ou reutilize <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CHAT_BASE_URL</ThemedText>) apontando para a URL pública da Static Web App.
+          </ThemedText>
+          <ThemedText style={styles.description}>
+            4. Publique as alterações. Depois que as funções forem atualizadas, abra esta aba e envie uma mensagem para validar se o agente está respondendo conforme o esperado.
+          </ThemedText>
+        </View>
         <View
           style={[
             styles.divider,
@@ -286,7 +366,7 @@ export default function ChatScreen() {
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder="Escreva sua pergunta ou pedido de oração..."
+              placeholder="Pergunte algo sobre a fé católica..."
               placeholderTextColor={colorScheme === 'dark' ? '#64748b' : '#94a3b8'}
               style={[
                 styles.textInput,
@@ -356,6 +436,12 @@ const styles = StyleSheet.create({
   description: {
     lineHeight: 22,
     textAlign: 'justify',
+  },
+  instructions: {
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#e0f2fe',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
