@@ -3,8 +3,7 @@ const { app } = require('@azure/functions');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const WORKFLOW_ID = process.env.OPENAI_CATECHIST_AGENT_ID;
 
-const buildWorkflowUrl = (workflowId) =>
-  workflowId ? `https://api.openai.com/v1/workflows/${workflowId}/runs` : null;
+const buildWorkflowUrl = () => 'https://api.openai.com/v1/workflows/runs';
 
 const inferOutputText = (payload) => {
   if (!payload || typeof payload !== 'object') {
@@ -86,7 +85,7 @@ const normalizeWorkflowResponse = (raw, fallbackConversationId) => {
   };
 };
 
-const workflowUrl = buildWorkflowUrl(WORKFLOW_ID);
+const workflowUrl = buildWorkflowUrl();
 
 app.http('catechistAgent', {
   methods: ['POST'],
@@ -160,13 +159,14 @@ app.http('catechistAgent', {
     }
 
     const payload = {
+      workflow_id: WORKFLOW_ID,
       input: {
         input_as_text: message,
       },
     };
 
     if (conversationId) {
-      payload.conversation = conversationId;
+      payload.conversation_id = conversationId;
     }
 
     try {
