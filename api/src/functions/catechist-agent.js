@@ -1,4 +1,5 @@
 const { app } = require('@azure/functions');
+const { randomUUID } = require('crypto');
 const { Agent, Runner, fileSearchTool } = require('@openai/agents');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -51,10 +52,17 @@ A fé é a aceitação racional da verdade revelada por Deus.
   },
 });
 
+const conversationStore = new Map();
+
 const runWorkflow = async (workflow) => {
-  const { input_as_text: inputText } = workflow ?? {};
+  const { input_as_text: inputText, conversation_id: conversationIdFromInput } = workflow ?? {};
+
+  const conversationId = conversationIdFromInput ?? randomUUID();
+
+  const previousHistory = conversationStore.get(conversationId) ?? [];
 
   const conversationHistory = [
+    ...previousHistory,
     {
       role: 'user',
       content: [
@@ -83,8 +91,25 @@ const runWorkflow = async (workflow) => {
     throw new Error('Agent result is undefined');
   }
 
+  const assistantMessage = {
+    role: 'assistant',
+    content: [
+      {
+        type: 'output_text',
+        text: agentResult.finalOutput ?? '',
+      },
+    ],
+  };
+
+  conversationStore.set(conversationId, [...conversationHistory, assistantMessage]);
+
   return {
     output_text: agentResult.finalOutput ?? '',
+    conversationId,
+    conversation_id: conversationId,
+    conversation: {
+      id: conversationId,
+    },
   };
 };
 
@@ -134,7 +159,7 @@ app.http('catechistAgent', {
       };
     }
 
-    const { message } = body ?? {};
+    const { message, conversationId } = body ?? {};
 
     if (typeof message !== 'string' || message.trim().length === 0) {
       return {
@@ -150,6 +175,9 @@ app.http('catechistAgent', {
     try {
       const result = await runWorkflow({
         input_as_text: message.trim(),
+        conversation_id: typeof conversationId === 'string' && conversationId.trim().length > 0
+          ? conversationId.trim()
+          : undefined,
       });
 
       return {
