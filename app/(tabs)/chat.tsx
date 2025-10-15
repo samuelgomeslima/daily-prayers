@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -104,7 +104,6 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const palette = Colors[colorScheme];
@@ -119,9 +118,15 @@ export default function ChatScreen() {
     const endpoint = CHAT_ENDPOINT;
 
     if (!endpoint) {
-      setError(
-        'Configuração ausente: defina EXPO_PUBLIC_CHAT_BASE_URL apontando para sua Static Web App para usar o chat nos apps nativos.'
-      );
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant-error`,
+          role: 'assistant',
+          content:
+            'Não foi possível iniciar a conversa. Verifique a configuração da variável EXPO_PUBLIC_CHAT_BASE_URL e tente novamente.',
+        },
+      ]);
       return;
     }
 
@@ -134,7 +139,6 @@ export default function ChatScreen() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsSending(true);
-    setError(null);
 
     try {
       const payloadMessages = [
@@ -183,7 +187,6 @@ export default function ChatScreen() {
         sendError instanceof Error
           ? sendError.message
           : 'Ocorreu um erro inesperado ao contatar a IA.';
-      setError(friendlyMessage);
       setMessages((prev) => [
         ...prev,
         {
@@ -191,6 +194,11 @@ export default function ChatScreen() {
           role: 'assistant',
           content:
             'Enfrentei um problema ao tentar responder. Confira sua conexão e tente novamente em instantes.',
+        },
+        {
+          id: `${Date.now()}-assistant-error-detail`,
+          role: 'assistant',
+          content: friendlyMessage,
         },
       ]);
     } finally {
@@ -230,33 +238,6 @@ export default function ChatScreen() {
     [colorScheme, palette]
   );
 
-  const headerComponent = useMemo(
-    () => (
-      <View style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          Companheiro de Fé
-        </ThemedText>
-        <ThemedText style={styles.description}>
-          Converse com uma IA especializada em espiritualidade católica. Peça sugestões de orações,
-          novenas, meditações ou orientações para aprofundar seus estudos. As respostas são baseadas
-          no magistério da Igreja e em documentos oficiais.
-        </ThemedText>
-        <ThemedText style={styles.description}>
-          As mensagens são enviadas com segurança aos nossos servidores, que utilizam a chave de API
-          configurada no Azure Static Web Apps para consultar a OpenAI em seu nome.
-        </ThemedText>
-        <View
-          style={[
-            styles.divider,
-            { backgroundColor: colorScheme === 'dark' ? '#1f2937' : '#e2e8f0' },
-          ]}
-        />
-        {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
-      </View>
-    ),
-    [colorScheme, error]
-  );
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <KeyboardAvoidingView
@@ -271,7 +252,6 @@ export default function ChatScreen() {
             renderItem={renderMessage}
             style={styles.list}
             contentContainerStyle={styles.listContent}
-            ListHeaderComponent={headerComponent}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             keyboardShouldPersistTaps="handled"
           />
@@ -345,26 +325,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingBottom: 24,
-  },
-  header: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  description: {
-    lineHeight: 22,
-    textAlign: 'justify',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#e2e8f0',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 14,
-    marginTop: 4,
   },
   messageWrapper: {
     flexDirection: 'row',

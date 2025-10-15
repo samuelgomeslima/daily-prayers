@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -183,7 +183,6 @@ export default function CatechistScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
@@ -199,9 +198,15 @@ export default function CatechistScreen() {
     const endpoint = CATECHIST_ENDPOINT;
 
     if (!endpoint) {
-      setError(
-        'Configuração ausente: defina EXPO_PUBLIC_CATECHIST_BASE_URL ou EXPO_PUBLIC_CHAT_BASE_URL apontando para sua Static Web App para usar o assistente catequista nos apps nativos.'
-      );
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant-error`,
+          role: 'assistant',
+          content:
+            'Não foi possível iniciar a conversa. Verifique as variáveis EXPO_PUBLIC_CATECHIST_BASE_URL ou EXPO_PUBLIC_CHAT_BASE_URL antes de tentar novamente.',
+        },
+      ]);
       return;
     }
 
@@ -214,8 +219,6 @@ export default function CatechistScreen() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsSending(true);
-    setError(null);
-
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -259,7 +262,6 @@ export default function CatechistScreen() {
         sendError instanceof Error
           ? sendError.message
           : 'Ocorreu um erro inesperado ao contatar o Assistente Catequista.';
-      setError(friendlyMessage);
       setMessages((prev) => [
         ...prev,
         {
@@ -267,6 +269,11 @@ export default function CatechistScreen() {
           role: 'assistant',
           content:
             'Enfrentei um problema ao tentar responder. Confira sua conexão e tente novamente em instantes.',
+        },
+        {
+          id: `${Date.now()}-assistant-error-detail`,
+          role: 'assistant',
+          content: friendlyMessage,
         },
       ]);
     } finally {
@@ -306,30 +313,6 @@ export default function CatechistScreen() {
     [colorScheme, palette]
   );
 
-  const headerComponent = useMemo(
-    () => (
-      <View style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          Assistente Catequista
-        </ThemedText>
-        <ThemedText style={styles.description}>
-          Integre o agente criado na sua conta OpenAI para responder dúvidas sobre a fé católica com base no livro “A Fé Explicada”.
-        </ThemedText>
-        <ThemedText style={styles.description}>
-          Consulte a aba <ThemedText type="defaultSemiBold">Explore</ThemedText> para seguir o passo a passo de configuração do agente antes de iniciar uma conversa.
-        </ThemedText>
-        <View
-          style={[
-            styles.divider,
-            { backgroundColor: colorScheme === 'dark' ? '#1f2937' : '#e2e8f0' },
-          ]}
-        />
-        {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
-      </View>
-    ),
-    [colorScheme, error]
-  );
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <KeyboardAvoidingView
@@ -344,7 +327,6 @@ export default function CatechistScreen() {
             renderItem={renderMessage}
             style={styles.list}
             contentContainerStyle={styles.listContent}
-            ListHeaderComponent={headerComponent}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             keyboardShouldPersistTaps="handled"
           />
@@ -418,26 +400,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingBottom: 24,
-  },
-  header: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  description: {
-    lineHeight: 22,
-    textAlign: 'justify',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#e2e8f0',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 14,
-    marginTop: 4,
   },
   messageWrapper: {
     flexDirection: 'row',
