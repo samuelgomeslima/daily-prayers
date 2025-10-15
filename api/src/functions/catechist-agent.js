@@ -52,27 +52,20 @@ A fé é a aceitação racional da verdade revelada por Deus.
   },
 });
 
-const conversationStore = new Map();
-
 const runWorkflow = async (workflow) => {
   const { input_as_text: inputText, conversation_id: conversationIdFromInput } = workflow ?? {};
 
   const conversationId = conversationIdFromInput ?? randomUUID();
 
-  const previousHistory = conversationStore.get(conversationId) ?? [];
-
-  const conversationHistory = [
-    ...previousHistory,
-    {
-      role: 'user',
-      content: [
-        {
-          type: 'input_text',
-          text: inputText,
-        },
-      ],
-    },
-  ];
+  const userMessage = {
+    role: 'user',
+    content: [
+      {
+        type: 'input_text',
+        text: inputText,
+      },
+    ],
+  };
 
   const traceMetadata = {
     __trace_source__: 'agent-builder',
@@ -85,7 +78,9 @@ const runWorkflow = async (workflow) => {
   const runner = new Runner({
     traceMetadata,
   });
-  const agentResult = await runner.run(myAgent, [...conversationHistory]);
+  const agentResult = await runner.run(myAgent, [userMessage], {
+    conversationId,
+  });
 
   if (!agentResult.finalOutput) {
     throw new Error('Agent result is undefined');
@@ -101,14 +96,15 @@ const runWorkflow = async (workflow) => {
     ],
   };
 
-  conversationStore.set(conversationId, [...conversationHistory, assistantMessage]);
+  const persistedConversationId = agentResult.conversation?.id ?? conversationId;
 
   return {
     output_text: agentResult.finalOutput ?? '',
-    conversationId,
-    conversation_id: conversationId,
+    conversationId: persistedConversationId,
+    conversation_id: persistedConversationId,
     conversation: {
-      id: conversationId,
+      id: persistedConversationId,
+      last_messages: [userMessage, assistantMessage],
     },
   };
 };
