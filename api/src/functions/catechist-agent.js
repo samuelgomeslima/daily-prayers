@@ -1,39 +1,147 @@
 const { app } = require('@azure/functions');
+const { Agent, Runner, fileSearchTool } = require('@openai/agents');
 
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const CATECHIST_AGENT_ID = process.env.OPENAI_CATECHIST_AGENT_ID;
+const WORKFLOW_ID = process.env.OPENAI_CATECHIST_AGENT_ID ?? null;
+const FILE_SEARCH_TOOL = process.env.FILE_SEARCH_TOOL ?? null;
+
+const configuredFileSearchTools = [];
+
+if (FILE_SEARCH_TOOL) {
+  configuredFileSearchTools.push(FILE_SEARCH_TOOL);
+}
+
+const fileSearch =
+  configuredFileSearchTools.length > 0
+    ? fileSearchTool(configuredFileSearchTools)
+    : null;
+
+const myAgent = new Agent({
+  name: 'My agent',
+  instructions: `Você é um agente de estudos católicos que responde EXCLUSIVAMENTE com base no livro “A Fé Explicada”, de Leo J. Trese.
+
+Regras:
+- Use o arquivo de conhecimento (PDF) para encontrar respostas diretas do livro.
+- Não use fontes externas nem opinião pessoal.
+- Responda em português, com clareza e fidelidade ao texto.
+- Sempre que possível, cite o capítulo, título ou página aproximada (se detectável).
+- Se a pergunta não estiver respondida no livro, diga:  
+  "Não encontrei uma resposta direta para isso em 'A Fé Explicada'."
+
+Formato de resposta:
+1️⃣ **Resumo claro** (máx. 4 linhas).  
+2️⃣ **Trecho relevante do livro** entre aspas.  
+3️⃣ **Referência** (capítulo/página se disponível).  
+
+Exemplo:
+---
+**Pergunta:** O que é fé?
+
+**Resposta:**
+A fé é a aceitação racional da verdade revelada por Deus.  
+> “A fé é uma luz que ilumina a mente e move a vontade a aceitar o que Deus revelou.”  
+📖 *Capítulo 1 – A Fé, página 12.*
+---`,
+  model: 'gpt-4o-mini',
+  tools: fileSearch ? [fileSearch] : [],
+  modelSettings: {
+    temperature: 1,
+    topP: 1,
+    maxTokens: 2048,
+    store: true,
+  },
+});
+
+const runWorkflow = async (workflow) => {
+  if (!workflow || typeof workflow.input_as_text !== 'string') {
+    throw new Error('workflow.input_as_text must be a string.');
+  }
+
+  const inputText = workflow.input_as_text.trim();
+
+  if (!inputText) {
+    throw new Error('workflow.input_as_text must not be empty.');
+  }
+
+  const providedConversationId =
+    typeof workflow.conversationId === 'string' &&
+    workflow.conversationId.trim().length > 0
+      ? workflow.conversationId.trim()
+      : null;
+
+  const conversationHistory = [
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'input_text',
+          text: inputText,
+        },
+      ],
+    },
+  ];
+
+  const runner = new Runner({
+    traceMetadata: {
+      __trace_source__: 'agent-builder',
+      workflow_id: WORKFLOW_ID,
+    },
+  });
+
+  const runOptions = providedConversationId
+    ? { conversationId: providedConversationId }
+    : undefined;
+
+  const agentResult = runOptions
+    ? await runner.run(myAgent, [...conversationHistory], runOptions)
+    : await runner.run(myAgent, [...conversationHistory]);
+
+  if (agentResult?.newItems?.length) {
+    conversationHistory.push(
+      ...agentResult.newItems.map((item) => item.rawItem)
+    );
+  }
+
+  if (!agentResult?.finalOutput) {
+    throw new Error('Agent result is undefined');
+  }
+
+  const extractConversationId = () => {
+    const directId =
+      agentResult?.conversationId ??
+      agentResult?.conversation_id ??
+      agentResult?.sessionId ??
+      agentResult?.session_id ??
+      null;
+
+    const nestedId =
+      agentResult?.conversation?.id ??
+      agentResult?.session?.id ??
+      agentResult?.response?.conversation?.id ??
+      agentResult?.response?.conversation_id ??
+      null;
+
+    return directId || nestedId || providedConversationId || null;
+  };
+
+  const conversationId = extractConversationId();
+
+  const responsePayload = {
+    output_text: agentResult.finalOutput ?? '',
+  };
+
+  if (conversationId) {
+    responsePayload.conversation = { id: conversationId };
+    responsePayload.conversation_id = conversationId;
+  }
+
+  return responsePayload;
+};
 
 app.http('catechistAgent', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'catechist-agent',
   handler: async (request, context) => {
-    if (!OPENAI_API_KEY) {
-      context.warn('Missing OPENAI_API_KEY environment variable.');
-      return {
-        status: 500,
-        jsonBody: {
-          error: {
-            message: 'The OpenAI API key is not configured on the server.',
-          },
-        },
-      };
-    }
-
-    if (!CATECHIST_AGENT_ID) {
-      context.warn('Missing OPENAI_CATECHIST_AGENT_ID environment variable.');
-      return {
-        status: 500,
-        jsonBody: {
-          error: {
-            message:
-              'The catechist agent identifier is not configured. Define OPENAI_CATECHIST_AGENT_ID in your environment.',
-          },
-        },
-      };
-    }
-
     let body;
 
     try {
@@ -50,63 +158,59 @@ app.http('catechistAgent', {
       };
     }
 
-    const { message, conversationId } = body ?? {};
+    const { input_as_text, message, conversationId } = body ?? {};
 
-    if (typeof message !== 'string' || message.trim().length === 0) {
+    const inputText =
+      typeof input_as_text === 'string' && input_as_text.trim().length > 0
+        ? input_as_text
+        : typeof message === 'string'
+        ? message
+        : null;
+
+    if (!inputText) {
       return {
         status: 400,
         jsonBody: {
           error: {
-            message: 'The request body must include a non-empty "message" string.',
+            message:
+              'The request body must include a non-empty "input_as_text" string.',
           },
         },
       };
     }
 
-    const payload = {
-      agent_id: CATECHIST_AGENT_ID,
-      input: message,
-    };
-
-    if (conversationId) {
-      payload.conversation = conversationId;
-    }
-
     try {
-      const response = await fetch(OPENAI_RESPONSES_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'OpenAI-Beta': 'responses=v1',
-        },
-        body: JSON.stringify(payload),
+      const normalizedConversationId =
+        typeof conversationId === 'string' && conversationId.trim().length > 0
+          ? conversationId.trim()
+          : null;
+
+      const result = await runWorkflow({
+        input_as_text: inputText,
+        conversationId: normalizedConversationId ?? undefined,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        context.warn('OpenAI API returned an error response for the catechist agent.', data);
-        return {
-          status: response.status,
-          jsonBody: data,
-        };
-      }
-
       return {
         status: 200,
-        jsonBody: data,
+        jsonBody: result,
       };
     } catch (error) {
-      context.error('Unexpected error calling OpenAI Responses API for the catechist agent.', error);
+      context.error(
+        'Unexpected error when executing catechist agent workflow.',
+        error
+      );
       return {
         status: 500,
         jsonBody: {
           error: {
-            message: 'Unable to contact the catechist agent right now. Please try again later.',
+            message:
+              'Unable to contact the catechist agent right now. Please try again later.',
           },
         },
       };
     }
   },
 });
+
+module.exports = {
+  runWorkflow,
+};
