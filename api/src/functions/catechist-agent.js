@@ -62,6 +62,12 @@ const runWorkflow = async (workflow) => {
     throw new Error('workflow.input_as_text must not be empty.');
   }
 
+  const providedConversationId =
+    typeof workflow.conversationId === 'string' &&
+    workflow.conversationId.trim().length > 0
+      ? workflow.conversationId.trim()
+      : null;
+
   const conversationHistory = [
     {
       role: 'user',
@@ -81,7 +87,13 @@ const runWorkflow = async (workflow) => {
     },
   });
 
-  const agentResult = await runner.run(myAgent, [...conversationHistory]);
+  const runOptions = providedConversationId
+    ? { conversationId: providedConversationId }
+    : undefined;
+
+  const agentResult = runOptions
+    ? await runner.run(myAgent, [...conversationHistory], runOptions)
+    : await runner.run(myAgent, [...conversationHistory]);
 
   if (agentResult?.newItems?.length) {
     conversationHistory.push(
@@ -93,9 +105,36 @@ const runWorkflow = async (workflow) => {
     throw new Error('Agent result is undefined');
   }
 
-  return {
+  const extractConversationId = () => {
+    const directId =
+      agentResult?.conversationId ??
+      agentResult?.conversation_id ??
+      agentResult?.sessionId ??
+      agentResult?.session_id ??
+      null;
+
+    const nestedId =
+      agentResult?.conversation?.id ??
+      agentResult?.session?.id ??
+      agentResult?.response?.conversation?.id ??
+      agentResult?.response?.conversation_id ??
+      null;
+
+    return directId || nestedId || providedConversationId || null;
+  };
+
+  const conversationId = extractConversationId();
+
+  const responsePayload = {
     output_text: agentResult.finalOutput ?? '',
   };
+
+  if (conversationId) {
+    responsePayload.conversation = { id: conversationId };
+    responsePayload.conversation_id = conversationId;
+  }
+
+  return responsePayload;
 };
 
 app.http('catechistAgent', {
@@ -119,7 +158,7 @@ app.http('catechistAgent', {
       };
     }
 
-    const { input_as_text, message } = body ?? {};
+    const { input_as_text, message, conversationId } = body ?? {};
 
     const inputText =
       typeof input_as_text === 'string' && input_as_text.trim().length > 0
@@ -141,7 +180,15 @@ app.http('catechistAgent', {
     }
 
     try {
-      const result = await runWorkflow({ input_as_text: inputText });
+      const normalizedConversationId =
+        typeof conversationId === 'string' && conversationId.trim().length > 0
+          ? conversationId.trim()
+          : null;
+
+      const result = await runWorkflow({
+        input_as_text: inputText,
+        conversationId: normalizedConversationId ?? undefined,
+      });
       return {
         status: 200,
         jsonBody: result,
