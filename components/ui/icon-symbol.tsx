@@ -21,6 +21,7 @@ const MAPPING = {
   'circle.grid.3x3.fill': 'apps',
   'bubble.left.and.bubble.right.fill': 'forum',
   'book.fill': 'menu-book',
+  'hands.sparkles.fill': 'self-improvement',
 } as IconMapping;
 
 /**
@@ -40,5 +41,15 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const iconStyle: StyleProp<TextStyle> = [
+    {
+      height: size,
+      lineHeight: size,
+      textAlign: 'center',
+      width: size,
+    },
+    style,
+  ];
+
+  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={iconStyle} />;
 }
