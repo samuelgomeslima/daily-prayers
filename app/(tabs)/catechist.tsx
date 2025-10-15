@@ -27,6 +27,7 @@ type CatechistResponse = {
   id?: string;
   conversation?: { id?: string } | null;
   conversation_id?: string;
+  finalOutput?: string;
   output?:
     | null
     | {
@@ -133,6 +134,10 @@ const extractAssistantText = (payload: CatechistResponse) => {
 
   const textSegments: string[] = [];
 
+  if (typeof payload.finalOutput === 'string' && payload.finalOutput.trim()) {
+    textSegments.push(payload.finalOutput.trim());
+  }
+
   if (Array.isArray(payload.output)) {
     for (const segment of payload.output) {
       if (segment?.type === 'message' && Array.isArray(segment.content)) {
@@ -218,7 +223,7 @@ export default function CatechistScreen() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: trimmed,
+          input_as_text: trimmed,
           conversationId: conversationId ?? undefined,
         }),
       });
