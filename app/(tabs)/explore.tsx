@@ -33,6 +33,21 @@ export default function TabTwoScreen() {
         </ThemedText>
       </ThemedView>
 
+      <Collapsible title="Configuração do Assistente Catequista">
+        <ThemedText>
+          1. No portal do OpenAI, copie o <ThemedText type="defaultSemiBold">ID do agente</ThemedText> que você criou (Assistants → seu agente → “Agent ID”).
+        </ThemedText>
+        <ThemedText>
+          2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis <ThemedText type="defaultSemiBold">OPENAI_API_KEY</ThemedText> e <ThemedText type="defaultSemiBold">OPENAI_CATECHIST_AGENT_ID</ThemedText> com os valores correspondentes.
+        </ThemedText>
+        <ThemedText>
+          3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CATECHIST_BASE_URL</ThemedText> (ou reutilize <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CHAT_BASE_URL</ThemedText>) apontando para a URL pública da Static Web App.
+        </ThemedText>
+        <ThemedText>
+          4. Publique as alterações. Depois que as funções forem atualizadas, abra a aba do assistente e envie uma mensagem para validar se o agente está respondendo conforme o esperado.
+        </ThemedText>
+      </Collapsible>
+
       <Collapsible title="Recursos oficiais do Vaticano">
         <ThemedText>
           Orientamos o acesso direto ao portal{' '}
