@@ -1,21 +1,13 @@
 const { app } = require('@azure/functions');
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const WORKFLOW_ID = process.env.OPENAI_CATECHIST_AGENT_ID;
+const { runCatechistAgent } = require('../workflows/catechist-agent-workflow');
 
-const buildWorkflowUrl = () => 'https://api.openai.com/v1/workflows/runs';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const WORKFLOW_ID = process.env.OPENAI_CATECHIST_AGENT_ID ?? null;
 
 const inferOutputText = (payload) => {
   if (!payload || typeof payload !== 'object') {
     return null;
-  }
-
-  if (typeof payload.output_text === 'string' && payload.output_text.trim().length > 0) {
-    return payload.output_text.trim();
-  }
-
-  if (typeof payload.final_output === 'string' && payload.final_output.trim().length > 0) {
-    return payload.final_output.trim();
   }
 
   const extractFromArray = (segments) => {
@@ -24,26 +16,30 @@ const inferOutputText = (payload) => {
     }
 
     for (const segment of segments) {
-      if (segment && typeof segment === 'object') {
-        if (typeof segment.output_text === 'string' && segment.output_text.trim().length > 0) {
-          return segment.output_text.trim();
-        }
+      if (!segment || typeof segment !== 'object') {
+        continue;
+      }
 
-        if (typeof segment.text === 'string' && segment.text.trim().length > 0) {
-          return segment.text.trim();
-        }
+      if (typeof segment.output_text === 'string' && segment.output_text.trim()) {
+        return segment.output_text.trim();
+      }
 
-        if (Array.isArray(segment.content)) {
-          for (const content of segment.content) {
-            if (content && typeof content === 'object') {
-              if (typeof content.text === 'string' && content.text.trim().length > 0) {
-                return content.text.trim();
-              }
+      if (typeof segment.text === 'string' && segment.text.trim()) {
+        return segment.text.trim();
+      }
 
-              if (typeof content.value === 'string' && content.value.trim().length > 0) {
-                return content.value.trim();
-              }
-            }
+      if (Array.isArray(segment.content)) {
+        for (const content of segment.content) {
+          if (!content || typeof content !== 'object') {
+            continue;
+          }
+
+          if (typeof content.text === 'string' && content.text.trim()) {
+            return content.text.trim();
+          }
+
+          if (typeof content.value === 'string' && content.value.trim()) {
+            return content.value.trim();
           }
         }
       }
@@ -51,6 +47,14 @@ const inferOutputText = (payload) => {
 
     return null;
   };
+
+  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  if (typeof payload.final_output === 'string' && payload.final_output.trim()) {
+    return payload.final_output.trim();
+  }
 
   return (
     extractFromArray(payload.output) ??
@@ -62,7 +66,39 @@ const inferOutputText = (payload) => {
   );
 };
 
-const normalizeWorkflowResponse = (raw, fallbackConversationId) => {
+const sanitizeHistory = (history) => {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  const sanitized = [];
+
+  for (const entry of history) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+
+    const role = entry.role === 'assistant' ? 'assistant' : 'user';
+    const rawText =
+      typeof entry.text === 'string'
+        ? entry.text
+        : typeof entry.content === 'string'
+          ? entry.content
+          : '';
+
+    const text = rawText.trim();
+
+    if (!text) {
+      continue;
+    }
+
+    sanitized.push({ role, text });
+  }
+
+  return sanitized;
+};
+
+const normalizeAgentResponse = (raw, fallbackConversationId) => {
   if (!raw || typeof raw !== 'object') {
     return {
       output_text: null,
@@ -82,10 +118,9 @@ const normalizeWorkflowResponse = (raw, fallbackConversationId) => {
     ...raw,
     conversation_id: conversationId ?? undefined,
     output_text: outputText ?? undefined,
+    final_output: typeof raw.final_output === 'string' ? raw.final_output : outputText ?? undefined,
   };
 };
-
-const workflowUrl = buildWorkflowUrl();
 
 app.http('catechistAgent', {
   methods: ['POST'],
@@ -117,18 +152,6 @@ app.http('catechistAgent', {
       };
     }
 
-    if (!workflowUrl) {
-      context.warn('Unable to resolve workflow URL for catechist agent.');
-      return {
-        status: 500,
-        jsonBody: {
-          error: {
-            message: 'The catechist workflow identifier appears to be invalid.',
-          },
-        },
-      };
-    }
-
     let body;
 
     try {
@@ -145,9 +168,11 @@ app.http('catechistAgent', {
       };
     }
 
-    const { message, conversationId } = body ?? {};
+    const { message, conversationId, history } = body ?? {};
+    const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+    const normalizedHistory = sanitizeHistory(history);
 
-    if (typeof message !== 'string' || message.trim().length === 0) {
+    if (!trimmedMessage) {
       return {
         status: 400,
         jsonBody: {
@@ -158,44 +183,61 @@ app.http('catechistAgent', {
       };
     }
 
-    const payload = {
-      workflow_id: WORKFLOW_ID,
-      input: {
-        input_as_text: message,
-      },
-    };
-
-    if (conversationId) {
-      payload.conversation_id = conversationId;
-    }
-
     try {
-      const response = await fetch(workflowUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'OpenAI-Beta': 'workflows=v1',
-        },
-        body: JSON.stringify(payload),
+      const agentResult = await runCatechistAgent({
+        message: trimmedMessage,
+        history: normalizedHistory,
       });
 
-      const data = await response.json();
+      const normalizedResponse = normalizeAgentResponse(agentResult, conversationId ?? undefined);
+      const assistantText = normalizedResponse.output_text;
 
-      if (!response.ok) {
-        context.warn('OpenAI API returned an error response for the catechist agent.', data);
+      if (!assistantText) {
+        context.warn('Catechist agent returned an empty response.', agentResult);
         return {
-          status: response.status,
-          jsonBody: data,
+          status: 502,
+          jsonBody: {
+            error: {
+              message: 'The catechist agent did not produce a response. Try again later.',
+            },
+          },
         };
+      }
+
+      if (conversationId && !normalizedResponse.conversation_id) {
+        normalizedResponse.conversation_id = conversationId;
       }
 
       return {
         status: 200,
-        jsonBody: normalizeWorkflowResponse(data, conversationId ?? undefined),
+        jsonBody: normalizedResponse,
       };
     } catch (error) {
-      context.error('Unexpected error calling OpenAI Workflows API for the catechist agent.', error);
+      if (error?.code === 'MODULE_NOT_FOUND') {
+        context.error('The @openai/agents package is required but could not be loaded.', error);
+        return {
+          status: 500,
+          jsonBody: {
+            error: {
+              message:
+                'The catechist agent runtime depends on the @openai/agents package. Install it in the API project and redeploy.',
+            },
+          },
+        };
+      }
+
+      if (error instanceof Error && error.message === 'Conversation history is empty.') {
+        return {
+          status: 400,
+          jsonBody: {
+            error: {
+              message: 'Unable to construct the catechist conversation history from the provided payload.',
+            },
+          },
+        };
+      }
+
+      context.error('Unexpected error while running the catechist agent workflow.', error);
       return {
         status: 500,
         jsonBody: {

@@ -48,6 +48,11 @@ type CatechistResponse = {
   };
 };
 
+type CatechistHistoryItem = {
+  role: 'user' | 'assistant';
+  text: string;
+};
+
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: 'welcome',
@@ -173,6 +178,16 @@ const extractConversationId = (payload: CatechistResponse) => {
   );
 };
 
+const buildHistoryPayload = (items: ChatMessage[]): CatechistHistoryItem[] => {
+  return items
+    .filter((item) => item.role === 'user' || item.role === 'assistant')
+    .filter((item) => item.id !== 'welcome' && !item.id.endsWith('-assistant-error'))
+    .map((item) => ({
+      role: item.role,
+      text: item.content,
+    }));
+};
+
 export default function CatechistScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
@@ -206,10 +221,13 @@ export default function CatechistScreen() {
       content: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInput('');
     setIsSending(true);
     setError(null);
+
+    const historyPayload = buildHistoryPayload(nextMessages);
 
     try {
       const response = await fetch(endpoint, {
@@ -220,6 +238,7 @@ export default function CatechistScreen() {
         body: JSON.stringify({
           message: trimmed,
           conversationId: conversationId ?? undefined,
+          history: historyPayload,
         }),
       });
 
@@ -267,7 +286,7 @@ export default function CatechistScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [conversationId, input]);
+  }, [conversationId, input, messages]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
