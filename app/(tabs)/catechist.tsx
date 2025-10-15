@@ -313,10 +313,10 @@ export default function CatechistScreen() {
         <View style={styles.instructions}>
           <ThemedText type="defaultSemiBold">Como configurar</ThemedText>
           <ThemedText style={styles.description}>
-            1. No portal do OpenAI, copie o <ThemedText type="defaultSemiBold">ID do agente</ThemedText> que você criou (Assistants → seu agente → “Agent ID”).
+            1. No portal do OpenAI, copie o <ThemedText type="defaultSemiBold">ID do workflow do agente</ThemedText> que você criou (Assistants → seu agente → “Workflow ID”).
           </ThemedText>
           <ThemedText style={styles.description}>
-            2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis <ThemedText type="defaultSemiBold">OPENAI_API_KEY</ThemedText> e <ThemedText type="defaultSemiBold">OPENAI_CATECHIST_AGENT_ID</ThemedText> com os valores correspondentes.
+            2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis <ThemedText type="defaultSemiBold">OPENAI_API_KEY</ThemedText> e <ThemedText type="defaultSemiBold">OPENAI_CATECHIST_AGENT_ID</ThemedText> usando a chave do workflow copiado no passo anterior.
           </ThemedText>
           <ThemedText style={styles.description}>
             3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CATECHIST_BASE_URL</ThemedText> (ou reutilize <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CHAT_BASE_URL</ThemedText>) apontando para a URL pública da Static Web App.
