@@ -38,6 +38,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="prayers"
+        options={{
+          title: 'Orações',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="hands.sparkles.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="catechist"
         options={{
           title: 'Catequista',
