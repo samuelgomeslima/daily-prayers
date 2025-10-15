@@ -329,21 +329,9 @@ export default function CatechistScreen() {
         <ThemedText style={styles.description}>
           Integre o agente criado na sua conta OpenAI para responder dúvidas sobre a fé católica com base no livro “A Fé Explicada”.
         </ThemedText>
-        <View style={styles.instructions}>
-          <ThemedText type="defaultSemiBold">Como configurar</ThemedText>
-          <ThemedText style={styles.description}>
-            1. No portal do OpenAI, copie o <ThemedText type="defaultSemiBold">ID do workflow do agente</ThemedText> que você criou (Assistants → seu agente → “Workflow ID”).
-          </ThemedText>
-          <ThemedText style={styles.description}>
-            2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis <ThemedText type="defaultSemiBold">OPENAI_API_KEY</ThemedText> e <ThemedText type="defaultSemiBold">OPENAI_CATECHIST_AGENT_ID</ThemedText> usando a chave do workflow copiado no passo anterior.
-          </ThemedText>
-          <ThemedText style={styles.description}>
-            3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CATECHIST_BASE_URL</ThemedText> (ou reutilize <ThemedText type="defaultSemiBold">EXPO_PUBLIC_CHAT_BASE_URL</ThemedText>) apontando para a URL pública da Static Web App.
-          </ThemedText>
-          <ThemedText style={styles.description}>
-            4. Publique as alterações. Depois que as funções forem atualizadas, abra esta aba e envie uma mensagem para validar se o agente está respondendo conforme o esperado.
-          </ThemedText>
-        </View>
+        <ThemedText style={styles.description}>
+          Consulte a aba <ThemedText type="defaultSemiBold">Explore</ThemedText> para seguir o passo a passo de configuração do agente antes de iniciar uma conversa.
+        </ThemedText>
         <View
           style={[
             styles.divider,
@@ -455,12 +443,6 @@ const styles = StyleSheet.create({
   description: {
     lineHeight: 22,
     textAlign: 'justify',
-  },
-  instructions: {
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#e0f2fe',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
