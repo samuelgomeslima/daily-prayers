@@ -313,13 +313,15 @@ export default function CatechistScreen() {
     [colorScheme, palette]
   );
 
+  const screenBackground = colorScheme === 'dark' ? '#0f172a' : palette.background;
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: screenBackground }}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: screenBackground }}
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
-        <ThemedView style={styles.container}>
+        <ThemedView style={[styles.container, { backgroundColor: screenBackground }]}>
           <FlatList
             ref={listRef}
             data={messages}
@@ -335,7 +337,7 @@ export default function CatechistScreen() {
               styles.inputContainer,
               {
                 borderTopColor: colorScheme === 'dark' ? '#1f2937' : '#cbd5f5',
-                backgroundColor: colorScheme === 'dark' ? '#0f172a' : 'transparent',
+                backgroundColor: colorScheme === 'dark' ? '#0f172a' : palette.background,
               },
             ]}>
             <TextInput
