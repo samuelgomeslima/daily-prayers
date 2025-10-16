@@ -22,6 +22,7 @@ const MAPPING = {
   'bubble.left.and.bubble.right.fill': 'forum',
   'book.fill': 'menu-book',
   'hands.sparkles.fill': 'self-improvement',
+  'square.and.pencil': 'note-alt',
 } as IconMapping;
 
 /**
