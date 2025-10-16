@@ -10,7 +10,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const tabBarStyle = Platform.OS === 'web' ? styles.webTabBar : undefined;
+  const tabBarStyle = Platform.select({
+    web: styles.webTabBar,
+    default: styles.mobileTabBar,
+  });
 
   return (
     <Tabs
@@ -19,6 +22,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle,
+        tabBarItemStyle: styles.tabBarItem,
       }}>
       <Tabs.Screen
         name="index"
@@ -109,9 +113,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+  tabBarItem: {
+    paddingVertical: 6,
+  },
   webTabBar: {
     paddingTop: 8,
     paddingBottom: 12,
     height: 76,
+  },
+  mobileTabBar: {
+    paddingTop: 10,
+    paddingBottom: 18,
+    height: 88,
   },
 });
