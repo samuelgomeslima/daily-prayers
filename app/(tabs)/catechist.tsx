@@ -54,7 +54,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     id: 'welcome',
     role: 'assistant',
     content:
-      'Paz e bem! Sou o Assistente Catequista, treinado com base nos livros “A Fé Explicada” e “Teologia do Corpo”. Faça suas perguntas sobre a fé católica e indique como deseja aprofundar seus estudos.',
+      'Paz e bem! Sou o Assistente Catequista, treinado com base nos livros “A Fé Explicada”, “Teologia do Corpo” e “História de uma Alma”. Faça suas perguntas sobre a fé católica e indique como deseja aprofundar seus estudos.',
   },
 ];
 
