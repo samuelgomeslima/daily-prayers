@@ -136,6 +136,8 @@ const createApiEndpoint = (path: string) => {
 
 const CATECHIST_ENDPOINT = createApiEndpoint('/api/catechist-agent');
 const CATECHIST_TRANSCRIBE_ENDPOINT = createApiEndpoint('/api/catechist-transcribe');
+const TRANSCRIBE_MODEL =
+  process.env.EXPO_PUBLIC_TRANSCRIBE_MODEL ?? 'gpt-4o-mini-transcribe';
 
 const guessMimeTypeFromUri = (uri: string) => {
   if (typeof uri !== 'string') {
@@ -165,6 +167,89 @@ const guessMimeTypeFromUri = (uri: string) => {
   }
 
   return 'audio/mp4';
+};
+
+const guessExtensionFromMimeType = (mimeType: string) => {
+  if (typeof mimeType !== 'string') {
+    return 'm4a';
+  }
+
+  const normalized = mimeType.toLowerCase();
+
+  if (normalized.includes('wav')) {
+    return 'wav';
+  }
+
+  if (normalized.includes('mpeg')) {
+    return 'mp3';
+  }
+
+  if (normalized.includes('3gpp')) {
+    return '3gp';
+  }
+
+  if (normalized.includes('aac')) {
+    return 'aac';
+  }
+
+  if (normalized.includes('ogg')) {
+    return 'ogg';
+  }
+
+  return 'm4a';
+};
+
+const createRecordingFormData = async (uri: string) => {
+  const info = await FileSystem.getInfoAsync(uri);
+
+  if (!info.exists) {
+    throw new Error('O arquivo de áudio gravado não foi encontrado.');
+  }
+
+  const mimeType = guessMimeTypeFromUri(uri);
+  const extension = guessExtensionFromMimeType(mimeType);
+  const fileName = `recording.${extension}`;
+  const formData = new FormData();
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const webFile = typeof File !== 'undefined' ? new File([blob], fileName, { type: mimeType }) : blob;
+    formData.append('file', webFile);
+  } else {
+    formData.append('file', {
+      uri,
+      name: fileName,
+      type: mimeType,
+    } as unknown as Blob);
+  }
+
+  formData.append('model', TRANSCRIBE_MODEL);
+
+  return formData;
+};
+
+const toFriendlyTranscriptionError = (error: unknown) => {
+  const defaultMessage =
+    'Ocorreu um problema técnico ao processar o áudio. Tente gravar novamente em instantes.';
+
+  if (!(error instanceof Error) || !error.message) {
+    return defaultMessage;
+  }
+
+  if (/encodingtype/i.test(error.message)) {
+    return 'Não consegui preparar o áudio gravado para envio. Abra o aplicativo novamente e tente gravar mais uma vez.';
+  }
+
+  if (/multipart|form-data/i.test(error.message)) {
+    return 'Não consegui enviar o áudio para transcrição. Verifique sua conexão e tente novamente.';
+  }
+
+  if (/request body is missing/i.test(error.message)) {
+    return 'Não encontrei o áudio gravado. Grave novamente e tente de novo.';
+  }
+
+  return defaultMessage;
 };
 
 const extractAssistantText = (payload: CatechistResponse) => {
@@ -404,21 +489,16 @@ export default function CatechistScreen() {
       }
 
       try {
-        const base64Audio = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
         setIsTranscribing(true);
+
+        const formData = await createRecordingFormData(uri);
 
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            Accept: 'application/json',
           },
-          body: JSON.stringify({
-            audio: base64Audio,
-            mimeType: guessMimeTypeFromUri(uri),
-          }),
+          body: formData,
         });
 
         if (!response.ok) {
@@ -440,10 +520,9 @@ export default function CatechistScreen() {
         await sendMessageFromText(transcribedText);
         return true;
       } catch (error) {
-        const friendlyMessage =
-          error instanceof Error
-            ? error.message
-            : 'Ocorreu um problema ao tentar transcrever o áudio gravado.';
+        console.error('Failed to transcribe catechist recording.', error);
+
+        const friendlyMessage = toFriendlyTranscriptionError(error);
         setMessages((prev) => [
           ...prev,
           {
@@ -501,6 +580,7 @@ export default function CatechistScreen() {
       recordingRef.current = recording;
       setIsRecording(true);
     } catch (error) {
+      console.error('Failed to start catechist audio recording.', error);
       recordingRef.current = null;
       setIsRecording(false);
       setMessages((prev) => [
@@ -529,6 +609,7 @@ export default function CatechistScreen() {
     try {
       await recording.stopAndUnloadAsync();
     } catch (error) {
+      console.error('Failed to stop catechist audio recording.', error);
       setIsRecording(false);
       setMessages((prev) => [
         ...prev,
