@@ -7,4 +7,21 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    settings: {
+      'import/core-modules': [
+        'expo-av',
+        'expo-constants',
+        'expo-file-system',
+        'expo-haptics',
+        'expo-image',
+        'expo-linking',
+        'expo-splash-screen',
+        'expo-status-bar',
+        'expo-symbols',
+        'expo-system-ui',
+        'expo-web-browser',
+      ],
+    },
+  },
 ]);
