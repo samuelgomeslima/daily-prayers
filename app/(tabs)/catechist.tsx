@@ -225,6 +225,7 @@ export default function CatechistScreen() {
   const [isSending, setIsSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingStarting, setIsRecordingStarting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [hasAudioPermission, setHasAudioPermission] = useState<boolean | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -466,25 +467,28 @@ export default function CatechistScreen() {
   );
 
   const startRecording = useCallback(async () => {
-    if (isRecording || isSending || isTranscribing) {
-      return;
-    }
-
-    const granted = await ensureMicrophonePermission();
-
-    if (!granted) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-assistant-audio-permission`,
-          role: 'assistant',
-          content: 'O microfone está desativado para o app. Ative a permissão para usar a transcrição por voz.',
-        },
-      ]);
+    if (isRecordingStarting || isRecording || isSending || isTranscribing) {
       return;
     }
 
     try {
+      setIsRecordingStarting(true);
+
+      const granted = await ensureMicrophonePermission();
+
+      if (!granted) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant-audio-permission`,
+            role: 'assistant',
+            content:
+              'O microfone está desativado para o app. Ative a permissão para usar a transcrição por voz.',
+          },
+        ]);
+        return;
+      }
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -508,8 +512,10 @@ export default function CatechistScreen() {
             'Não consegui iniciar a gravação de áudio. Verifique as permissões do microfone e tente novamente.',
         },
       ]);
+    } finally {
+      setIsRecordingStarting(false);
     }
-  }, [ensureMicrophonePermission, isRecording, isSending, isTranscribing]);
+  }, [ensureMicrophonePermission, isRecording, isRecordingStarting, isSending, isTranscribing]);
 
   const finishRecording = useCallback(async () => {
     const recording = recordingRef.current;
@@ -566,7 +572,7 @@ export default function CatechistScreen() {
     }
   }, [finishRecording, isRecording, startRecording]);
 
-  const isBusy = isSending || isTranscribing;
+  const isBusy = isSending || isTranscribing || isRecordingStarting;
   const trimmedInput = input.trim();
 
   const renderMessage = useCallback(
