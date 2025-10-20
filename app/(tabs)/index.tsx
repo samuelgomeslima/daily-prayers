@@ -69,6 +69,32 @@ export default function HomeScreen() {
         </ThemedText>
       </FeatureCard>
 
+      <FeatureCard title="Jejum e Abstinência">
+        <ThemedText style={styles.cardText}>
+          Para orientar os fiéis nos tempos penitenciais, indicamos as normas oficiais da
+          Conferência Nacional dos Bispos do Brasil (CNBB), que destacam a obrigatoriedade
+          da abstinência de carne às sextas-feiras da Quaresma e o jejum na Quarta-feira de
+          Cinzas e na Sexta-feira Santa para maiores de 18 e menores de 60 anos.
+        </ThemedText>
+        <ThemedText style={styles.cardText}>
+          Recomendamos também iniciativas paroquiais para adaptar o jejum às realidades
+          locais, sempre incentivando acompanhamento espiritual e a prática de obras de
+          caridade como parte do compromisso penitencial.
+        </ThemedText>
+        <View style={styles.actions}>
+          <ExternalLink href="https://www.cnbb.org.br/"> 
+            <ThemedText type="link">Orientações sobre jejum – CNBB</ThemedText>
+          </ExternalLink>
+          <ExternalLink href="https://www.vatican.va/content/francesco/pt/messages/lent.html">
+            <ThemedText type="link">Mensagens de Quaresma do Papa</ThemedText>
+          </ExternalLink>
+        </View>
+        <ThemedText style={styles.cardNote}>
+          • Incentivamos o uso de lembretes e notas no aplicativo para registrar os propósitos
+          pessoais de jejum e práticas de caridade, fortalecendo a vivência comunitária.
+        </ThemedText>
+      </FeatureCard>
+
       <FeatureCard title="Santo do Dia">
         <ThemedText style={styles.cardText}>
           Consumimos portais católicos confiáveis, como Canção Nova, e mantemos cache
