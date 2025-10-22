@@ -199,6 +199,11 @@ const guessExtensionFromMimeType = (mimeType: string) => {
   return 'm4a';
 };
 
+const MIN_RECORDING_DURATION_MS = 1000;
+const RECORDING_STOP_DELAY_MS = 200;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const createRecordingFormData = async (uri: string) => {
   const info = await FileSystem.getInfoAsync(uri);
 
@@ -605,12 +610,52 @@ export default function CatechistScreen() {
     }
 
     recordingRef.current = null;
+    let recordingUri: string | null = null;
 
     try {
+      const statusBeforeStop = await recording.getStatusAsync().catch(() => null);
+
+      if (statusBeforeStop?.isRecording && RECORDING_STOP_DELAY_MS > 0) {
+        await wait(RECORDING_STOP_DELAY_MS);
+      }
+
       await recording.stopAndUnloadAsync();
+
+      const statusAfterStop = await recording.getStatusAsync().catch(() => statusBeforeStop);
+      const durationMillis =
+        typeof statusAfterStop?.durationMillis === 'number' ? statusAfterStop.durationMillis : null;
+      const isShortRecording =
+        typeof durationMillis === 'number' && durationMillis < MIN_RECORDING_DURATION_MS;
+
+      recordingUri = recording.getURI();
+
+      if (!recordingUri) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant-audio-missing`,
+            role: 'assistant',
+            content: 'Não foi possível acessar o áudio gravado. Tente gravar novamente.',
+          },
+        ]);
+        return;
+      }
+
+      if (isShortRecording) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant-audio-too-short`,
+            role: 'assistant',
+            content: 'O áudio é muito curto. Grave por pelo menos um segundo.',
+          },
+        ]);
+        return;
+      }
+
+      await transcribeRecording(recordingUri);
     } catch (error) {
       console.error('Failed to stop catechist audio recording.', error);
-      setIsRecording(false);
       setMessages((prev) => [
         ...prev,
         {
@@ -619,29 +664,13 @@ export default function CatechistScreen() {
           content: 'Não consegui finalizar a gravação de áudio. Tente novamente.',
         },
       ]);
-      return;
-    }
-
-    setIsRecording(false);
-
-    const uri = recording.getURI();
-
-    if (!uri) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-assistant-audio-missing`,
-          role: 'assistant',
-          content: 'Não foi possível acessar o áudio gravado. Tente gravar novamente.',
-        },
-      ]);
-      return;
-    }
-
-    try {
-      await transcribeRecording(uri);
     } finally {
-      FileSystem.deleteAsync(uri).catch(() => null);
+      setIsRecording(false);
+
+      const uriToDelete = recordingUri ?? recording.getURI();
+      if (uriToDelete) {
+        FileSystem.deleteAsync(uriToDelete).catch(() => null);
+      }
     }
   }, [transcribeRecording]);
 
