@@ -72,6 +72,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="square.and.pencil" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="cash-register"
+        options={{
+          title: 'Caixa',
+          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Caixa" />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="creditcard.fill" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
