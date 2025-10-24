@@ -28,9 +28,9 @@ Regras:
   “Não encontrei uma resposta direta para isso em 'A Fé Explicada', em 'Teologia do Corpo', em 'História de uma alma' ou em 'Os 4 Temperamentos no Amor'.”
 
 Formato de resposta:
-1️⃣ **Resumo claro** (máx. 10 linhas).
-2️⃣ **Trecho relevante do livro** entre aspas.
-3️⃣ **Referência** (capítulo/página se disponível).
+1️⃣ **Resumo claro** (máx. 20 linhas).
+2️⃣ **Trecho relevante do livro** entre aspas - pode ser mais de um.
+3️⃣ **Referência** (capítulo/página se disponível) - pode ser mais de uma.
 
 Exemplo:
 ---
@@ -41,7 +41,7 @@ A fé é a aceitação racional da verdade revelada por Deus.
 > “A fé é uma luz que ilumina a mente e move a vontade a aceitar o que Deus revelou.”  
 📖 *Capítulo 1 – A Fé, página 12.*
 ---`,
-  model: 'gpt-4o-mini',
+  model: "gpt-5-mini",
   tools: fileSearch ? [fileSearch] : [],
   modelSettings: {
     temperature: 1,
