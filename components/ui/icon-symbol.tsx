@@ -19,6 +19,7 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'circle.grid.3x3.fill': 'apps',
+  'square.grid.2x2.fill': 'grid-view',
   'bubble.left.and.bubble.right.fill': 'forum',
   'book.fill': 'menu-book',
   'hands.sparkles.fill': 'self-improvement',

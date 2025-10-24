@@ -1,17 +1,47 @@
 import { Image } from 'expo-image';
-import { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts } from '@/constants/theme';
 
-const CARD_COLORS = {
-  light: '#F2F6FB',
-  dark: '#1C252F',
+type QuickAction = {
+  href: string;
+  title: string;
+  description: string;
 };
+
+const ACTION_CARD_COLORS = {
+  light: '#F4F8FF',
+  dark: '#101723',
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    href: '/(tabs)/services',
+    title: 'Serviços oficiais',
+    description:
+      'Consulte fontes aprovadas para leituras, notícias e horários de celebrações.',
+  },
+  {
+    href: '/(tabs)/rosary',
+    title: 'Guia do Rosário',
+    description: 'Acompanhe as contas, mistérios diários e invocações do Santo Rosário.',
+  },
+  {
+    href: '/(tabs)/prayers',
+    title: 'Orações bilíngues',
+    description: 'Reze em português e latim com busca rápida e cards acessíveis.',
+  },
+  {
+    href: '/(tabs)/catechist',
+    title: 'Assistente Catequista',
+    description:
+      'Envie perguntas por texto ou voz e receba respostas fundamentadas no magistério.',
+  },
+];
 
 export default function HomeScreen() {
   return (
@@ -23,130 +53,49 @@ export default function HomeScreen() {
           style={styles.headerImage}
         />
       }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title" style={styles.title}>
-          Conteúdo litúrgico oficial
+      <ThemedView style={styles.heroContainer}>
+        <ThemedText type="title" style={styles.heroTitle}>
+          Seu companheiro diário de oração
         </ThemedText>
-        <ThemedText style={styles.lead}>
-          Resumo das integrações aprovadas para disponibilizar leituras, ofício diário,
-          santos e horários de celebrações no aplicativo.
+        <ThemedText style={styles.heroLead}>
+          Organize devocionais, acesse conteúdos oficiais da Igreja e conte com apoio
+          espiritual inteligente em um único lugar.
         </ThemedText>
       </ThemedView>
 
-      <FeatureCard title="Documentos e Liturgia (Vaticano)">
-        <ThemedText style={styles.cardText}>
-          Direcionamos os usuários para o portal oficial do Vaticano, garantindo acesso
-          direto às constituições, homilias e textos litúrgicos publicados pela Santa Sé
-          no site original.
-        </ThemedText>
-        <ThemedText style={styles.cardText}>
-          Também destacamos as notícias em português do Vatican News, atualizadas pela
-          própria Santa Sé. Ambos os canais são abertos no navegador do dispositivo para
-          respeitar as diretrizes de acesso e funcionamento de cada site.
-        </ThemedText>
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
-            <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.vaticannews.va/pt.html">
-            <ThemedText type="link">Vatican News em português</ThemedText>
-          </ExternalLink>
-        </View>
-      </FeatureCard>
+      <ThemedText type="subtitle" style={styles.sectionTitle}>
+        Acesso rápido
+      </ThemedText>
 
-      <FeatureCard title="Liturgia Diária (Brasil)">
-        <ThemedText style={styles.cardText}>
-          Conteúdo sincronizado com o portal da Canção Nova, garantindo acesso às leituras,
-          salmos e orações publicados em{' '}
-          <ExternalLink href="https://liturgia.cancaonova.com/pb/">
-            <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
-          </ExternalLink>
-          . Respeitamos o formato original exibindo o link oficial em todas as sessões do app.
-        </ThemedText>
-        <ThemedText style={styles.cardNote}>
-          • Conteúdo armazenado localmente apenas para leitura offline temporária, sempre
-          com sincronização direta diária da fonte oficial.
-        </ThemedText>
-      </FeatureCard>
-
-      <FeatureCard title="Jejum e Abstinência">
-        <ThemedText style={styles.cardText}>
-          Para orientar os fiéis nos tempos penitenciais, indicamos as normas oficiais da
-          Conferência Nacional dos Bispos do Brasil (CNBB), que destacam a obrigatoriedade
-          da abstinência de carne às sextas-feiras da Quaresma e o jejum na Quarta-feira de
-          Cinzas e na Sexta-feira Santa para maiores de 18 e menores de 60 anos.
-        </ThemedText>
-        <ThemedText style={styles.cardText}>
-          Recomendamos também iniciativas paroquiais para adaptar o jejum às realidades
-          locais, sempre incentivando acompanhamento espiritual e a prática de obras de
-          caridade como parte do compromisso penitencial.
-        </ThemedText>
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.cnbb.org.br/"> 
-            <ThemedText type="link">Orientações sobre jejum – CNBB</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.vatican.va/content/francesco/pt/messages/lent.html">
-            <ThemedText type="link">Mensagens de Quaresma do Papa</ThemedText>
-          </ExternalLink>
-        </View>
-        <ThemedText style={styles.cardNote}>
-          • Incentivamos o uso de lembretes e notas no aplicativo para registrar os propósitos
-          pessoais de jejum e práticas de caridade, fortalecendo a vivência comunitária.
-        </ThemedText>
-      </FeatureCard>
-
-      <FeatureCard title="Santo do Dia">
-        <ThemedText style={styles.cardText}>
-          Consumimos portais católicos confiáveis, como Canção Nova, e mantemos cache
-          diário para reduzir acessos consecutivos. Créditos e links diretos são exibidos
-          no app junto ao conteúdo resumido.
-        </ThemedText>
-        <View style={styles.actions}>
-          <ExternalLink href="https://santo.cancaonova.com/">
-            <ThemedText type="link">Santo do Dia – Canção Nova</ThemedText>
-          </ExternalLink>
-        </View>
-        <ThemedText style={styles.cardNote}>
-          • O cache é renovado diariamente e limpo automaticamente para garantir que novas
-          biografias sejam carregadas com pontualidade.
-        </ThemedText>
-      </FeatureCard>
-
-      <FeatureCard title="Horários de Missas e Confissões">
-        <ThemedText style={styles.cardText}>
-          Não há API nacional unificada. Mantemos cadastro manual colaborativo e indicamos o
-          guia atualizado da Arquidiocese de Belo Horizonte para ampliar a cobertura.
-        </ThemedText>
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.missadiariabh.com/missadiaria">
-            <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.missadiariabh.com/confissoes">
-            <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
-          </ExternalLink>
-        </View>
-        <ThemedText style={styles.cardNote}>
-          • Fichas cadastradas pela comunidade contam com revisão editorial, e os deep links
-          levam direto aos horários oficiais mantidos pela arquidiocese.
-        </ThemedText>
-      </FeatureCard>
+      <ThemedView style={styles.actionList}>
+        {QUICK_ACTIONS.map((action) => (
+          <ActionCard key={action.href} {...action} />
+        ))}
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
 
-type FeatureCardProps = {
-  title: string;
-  children: ReactNode;
-};
-
-function FeatureCard({ title, children }: FeatureCardProps) {
+function ActionCard({ href, title, description }: QuickAction) {
   return (
-    <ThemedView style={styles.card} lightColor={CARD_COLORS.light} darkColor={CARD_COLORS.dark}>
-      <ThemedText type="subtitle" style={styles.cardTitle}>
-        {title}
-      </ThemedText>
-      {children}
-    </ThemedView>
+    <Link href={href} asChild>
+      <Pressable
+        style={({ pressed }) => [styles.actionPressable, pressed && styles.actionPressed]}
+        accessibilityRole="button"
+        accessibilityHint={`Abrir ${title}`}
+      >
+        <ThemedView
+          style={styles.actionCard}
+          lightColor={ACTION_CARD_COLORS.light}
+          darkColor={ACTION_CARD_COLORS.dark}
+        >
+          <ThemedText type="subtitle" style={styles.actionTitle}>
+            {title}
+          </ThemedText>
+          <ThemedText style={styles.actionDescription}>{description}</ThemedText>
+        </ThemedView>
+      </Pressable>
+    </Link>
   );
 }
 
@@ -159,35 +108,39 @@ const styles = StyleSheet.create({
     position: 'absolute',
     opacity: 0.4,
   },
-  titleContainer: {
+  heroContainer: {
     gap: 12,
     marginBottom: 24,
   },
-  title: {
+  heroTitle: {
     fontFamily: Fonts.rounded,
   },
-  lead: {
+  heroLead: {
     lineHeight: 20,
   },
-  card: {
+  sectionTitle: {
+    fontFamily: Fonts.serif,
+    marginBottom: 12,
+  },
+  actionList: {
+    gap: 12,
+  },
+  actionPressable: {
+    borderRadius: 16,
+  },
+  actionPressed: {
+    opacity: 0.7,
+  },
+  actionCard: {
     padding: 18,
     borderRadius: 16,
-    marginBottom: 16,
-    gap: 12,
+    gap: 8,
   },
-  cardTitle: {
+  actionTitle: {
     fontFamily: Fonts.serif,
   },
-  cardText: {
+  actionDescription: {
     lineHeight: 20,
-  },
-  cardNote: {
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
   },
 });
+
