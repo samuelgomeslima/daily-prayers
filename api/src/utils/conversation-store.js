@@ -10,6 +10,7 @@ const TEMP_DIR = path.join(
 
 let storeFilePath;
 let initializingStorePromise;
+let storeWriteQueue = Promise.resolve();
 
 const getCandidateDirectories = () => {
   const candidates = [process.env.CONVERSATION_STORE_DIR, DEFAULT_DATA_DIR, TEMP_DIR];
@@ -105,6 +106,15 @@ const buildKey = (conversationId, agent) => {
   return normalizedAgent ? `${normalizedAgent}:${normalizedId}` : normalizedId;
 };
 
+const waitForWritesToComplete = async () => {
+  try {
+    await storeWriteQueue;
+  } catch {
+    // The queue intentionally swallows errors for subsequent operations, so
+    // ignore any pending rejection that has already been logged by callers.
+  }
+};
+
 const getConversation = async (conversationId, agent) => {
   const key = buildKey(conversationId, agent);
 
@@ -113,6 +123,7 @@ const getConversation = async (conversationId, agent) => {
   }
 
   try {
+    await waitForWritesToComplete();
     const store = await readStore();
     const history = store[key];
 
@@ -123,6 +134,17 @@ const getConversation = async (conversationId, agent) => {
   }
 };
 
+const runExclusively = (operation) => {
+  const previous = storeWriteQueue;
+  const next = (async () => {
+    await previous;
+    return operation();
+  })();
+
+  storeWriteQueue = next.catch(() => {});
+  return next;
+};
+
 const setConversation = async (conversationId, agent, messages) => {
   const key = buildKey(conversationId, agent);
 
@@ -131,9 +153,11 @@ const setConversation = async (conversationId, agent, messages) => {
   }
 
   try {
-    const store = await readStore();
-    store[key] = messages;
-    await writeStore(store);
+    await runExclusively(async () => {
+      const store = await readStore();
+      store[key] = messages;
+      await writeStore(store);
+    });
   } catch (error) {
     console.warn('Failed to persist conversation history. Continuing without persistence.', error);
   }
