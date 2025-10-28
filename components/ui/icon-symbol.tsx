@@ -23,6 +23,8 @@ const MAPPING = {
   'book.fill': 'menu-book',
   'hands.sparkles.fill': 'self-improvement',
   'square.and.pencil': 'note-alt',
+  'gearshape.fill': 'settings',
+  'checkmark.circle.fill': 'check-circle',
 } as IconMapping;
 
 /**

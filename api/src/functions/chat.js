@@ -2,6 +2,15 @@ const { app } = require('@azure/functions');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const AVAILABLE_MODELS = new Set(['gpt-5-mini', 'gpt-4o-mini']);
+const DEFAULT_MODEL = (() => {
+  const configured = process.env.OPENAI_CHAT_MODEL;
+  if (typeof configured === 'string' && AVAILABLE_MODELS.has(configured)) {
+    return configured;
+  }
+
+  return 'gpt-4o-mini';
+})();
 
 app.http('chat', {
   methods: ['POST'],
@@ -35,7 +44,12 @@ app.http('chat', {
       };
     }
 
-    const { messages, temperature = 0.6 } = body ?? {};
+    const { messages, temperature = 0.6, model: requestedModel } = body ?? {};
+
+    const model =
+      typeof requestedModel === 'string' && AVAILABLE_MODELS.has(requestedModel)
+        ? requestedModel
+        : DEFAULT_MODEL;
 
     if (!Array.isArray(messages)) {
       return {
@@ -56,7 +70,7 @@ app.http('chat', {
           Authorization: `Bearer ${OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model,
           messages,
           temperature,
         }),

@@ -15,16 +15,28 @@ const fileSearch =
     ? fileSearchTool(configuredFileSearchTools)
     : null;
 
-const myAgent = new Agent({
-  name: 'My agent',
-  instructions: `Você é um agente de estudos católicos que responde EXCLUSIVAMENTE com base nos livros “A Fé Explicada”, de Leo J. Trese; “Teologia do Corpo”, de São João Paulo II; “História de uma alma”, de Santa Teresinha; e “Os 4 Temperamentos no Amor”, de Ruth Gomes e Luis Gomes.
+const AVAILABLE_MODELS = new Set(['gpt-5-mini', 'gpt-4o-mini']);
+
+const DEFAULT_MODEL = (() => {
+  const configured = process.env.OPENAI_CATECHIST_MODEL;
+  if (typeof configured === 'string' && AVAILABLE_MODELS.has(configured)) {
+    return configured;
+  }
+
+  return 'gpt-5-mini';
+})();
+
+const createCatechistAgent = (model) =>
+  new Agent({
+    name: 'My agent',
+    instructions: `Você é um agente de estudos católicos que responde EXCLUSIVAMENTE com base nos livros “A Fé Explicada”, de Leo J. Trese; “Teologia do Corpo”, de São João Paulo II; “História de uma alma”, de Santa Teresinha; e “Os 4 Temperamentos no Amor”, de Ruth Gomes e Luis Gomes.
 
 Regras:
 - Use os arquivos de conhecimento (PDF) para encontrar respostas diretas dos livros.
 - Não use fontes externas nem opinião pessoal.
 - Responda em português, com clareza e fidelidade ao texto.
 - Sempre que possível, cite o capítulo, título ou página aproximada (se detectável).
-- Se a pergunta não estiver respondida no livro, diga:  
+- Se a pergunta não estiver respondida no livro, diga:
   “Não encontrei uma resposta direta para isso em 'A Fé Explicada', em 'Teologia do Corpo', em 'História de uma alma' ou em 'Os 4 Temperamentos no Amor'.”
 
 Formato de resposta:
@@ -37,21 +49,35 @@ Exemplo:
 **Pergunta:** O que é fé?
 
 **Resposta:**
-A fé é a aceitação racional da verdade revelada por Deus.  
-> “A fé é uma luz que ilumina a mente e move a vontade a aceitar o que Deus revelou.”  
+A fé é a aceitação racional da verdade revelada por Deus.
+> “A fé é uma luz que ilumina a mente e move a vontade a aceitar o que Deus revelou.”
 📖 *Capítulo 1 – A Fé, página 12.*
 ---`,
-  model: "gpt-5-mini",
-  tools: fileSearch ? [fileSearch] : [],
-  modelSettings: {
-    temperature: 1,
-    topP: 1,
-    maxTokens: 2048,
-    store: true,
-  },
-});
+    model,
+    tools: fileSearch ? [fileSearch] : [],
+    modelSettings: {
+      temperature: 1,
+      topP: 1,
+      maxTokens: 2048,
+      store: true,
+    },
+  });
 
-const runWorkflow = async (workflow) => {
+const agentCache = new Map();
+
+function getAgentForModel(model) {
+  if (agentCache.has(model)) {
+    return agentCache.get(model);
+  }
+
+  const agent = createCatechistAgent(model);
+  agentCache.set(model, agent);
+  return agent;
+}
+
+const defaultAgent = getAgentForModel(DEFAULT_MODEL);
+
+const runWorkflow = async (workflow, agent = defaultAgent) => {
   if (!workflow || typeof workflow.input_as_text !== 'string') {
     throw new Error('workflow.input_as_text must be a string.');
   }
@@ -91,9 +117,11 @@ const runWorkflow = async (workflow) => {
     ? { conversationId: providedConversationId }
     : undefined;
 
+  const agentToUse = agent ?? defaultAgent;
+
   const agentResult = runOptions
-    ? await runner.run(myAgent, [...conversationHistory], runOptions)
-    : await runner.run(myAgent, [...conversationHistory]);
+    ? await runner.run(agentToUse, [...conversationHistory], runOptions)
+    : await runner.run(agentToUse, [...conversationHistory]);
 
   if (agentResult?.newItems?.length) {
     conversationHistory.push(
@@ -158,7 +186,8 @@ app.http('catechistAgent', {
       };
     }
 
-    const { input_as_text, message, conversationId } = body ?? {};
+    const { input_as_text, message, conversationId, model: requestedModel } =
+      body ?? {};
 
     const inputText =
       typeof input_as_text === 'string' && input_as_text.trim().length > 0
@@ -185,10 +214,23 @@ app.http('catechistAgent', {
           ? conversationId.trim()
           : null;
 
-      const result = await runWorkflow({
-        input_as_text: inputText,
-        conversationId: normalizedConversationId ?? undefined,
-      });
+      const resolvedModel =
+        typeof requestedModel === 'string' && AVAILABLE_MODELS.has(requestedModel)
+          ? requestedModel
+          : DEFAULT_MODEL;
+
+      const agent =
+        resolvedModel === DEFAULT_MODEL
+          ? defaultAgent
+          : getAgentForModel(resolvedModel);
+
+      const result = await runWorkflow(
+        {
+          input_as_text: inputText,
+          conversationId: normalizedConversationId ?? undefined,
+        },
+        agent
+      );
       return {
         status: 200,
         jsonBody: result,
