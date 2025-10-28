@@ -19,6 +19,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { usePersistentConversation } from '@/hooks/use-persistent-conversation';
 
 type ChatMessage = {
   id: string;
@@ -310,10 +311,13 @@ const extractConversationId = (payload: CatechistResponse) => {
 
 export default function CatechistScreen() {
   const colorScheme = useColorScheme() ?? 'light';
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const { messages, setMessages, conversationId, setConversationId: persistConversationId, isHydrated } =
+    usePersistentConversation<ChatMessage>({
+      storageKey: 'catechist-assistant',
+      initialMessages: INITIAL_MESSAGES,
+    });
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingStarting, setIsRecordingStarting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -370,7 +374,7 @@ export default function CatechistScreen() {
     async (rawText: string) => {
       const trimmed = rawText.trim();
 
-      if (!trimmed) {
+      if (!trimmed || !isHydrated) {
         return false;
       }
 
@@ -434,7 +438,7 @@ export default function CatechistScreen() {
 
         const newConversationId = extractConversationId(data);
         if (newConversationId) {
-          setConversationId(newConversationId);
+          persistConversationId(newConversationId);
         }
 
         return true;
@@ -462,19 +466,19 @@ export default function CatechistScreen() {
         setIsSending(false);
       }
     },
-    [conversationId]
+    [conversationId, isHydrated, persistConversationId]
   );
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
 
-    if (!trimmed) {
+    if (!trimmed || !isHydrated) {
       return;
     }
 
     setInput('');
     await sendMessageFromText(trimmed);
-  }, [input, sendMessageFromText]);
+  }, [input, isHydrated, sendMessageFromText]);
 
   const transcribeRecording = useCallback(
     async (uri: string) => {
@@ -794,11 +798,16 @@ export default function CatechistScreen() {
               <Pressable
                 accessibilityRole="button"
                 onPress={sendMessage}
-                disabled={isBusy || isRecording || trimmedInput.length === 0}
+                disabled={
+                  isBusy ||
+                  isRecording ||
+                  trimmedInput.length === 0 ||
+                  !isHydrated
+                }
                 style={({ pressed }) => [
                   styles.sendButton,
                   {
-                    backgroundColor: isBusy
+                    backgroundColor: isBusy || !isHydrated
                       ? colorScheme === 'dark'
                         ? '#1d4ed8'
                         : '#94a3b8'

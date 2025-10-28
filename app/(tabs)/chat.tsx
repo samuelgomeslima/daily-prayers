@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { usePersistentConversation } from '@/hooks/use-persistent-conversation';
 
 type ChatMessage = {
   id: string;
@@ -101,7 +102,12 @@ const CHAT_ENDPOINT = (() => {
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme() ?? 'light';
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const { messages, setMessages, conversationId, setConversationId, isHydrated } =
+    usePersistentConversation<ChatMessage>({
+      storageKey: 'companion-chat',
+      initialMessages: INITIAL_MESSAGES,
+      autoGenerateConversationId: true,
+    });
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -111,10 +117,10 @@ export default function ChatScreen() {
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
 
-    if (!trimmed) {
+    if (!trimmed || !isHydrated) {
       return;
     }
-    
+
     const endpoint = CHAT_ENDPOINT;
 
     if (!endpoint) {
@@ -125,6 +131,19 @@ export default function ChatScreen() {
           role: 'assistant',
           content:
             'Não foi possível iniciar a conversa. Verifique a configuração da variável EXPO_PUBLIC_CHAT_BASE_URL e tente novamente.',
+        },
+      ]);
+      return;
+    }
+
+    if (!conversationId) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant-error`,
+          role: 'assistant',
+          content:
+            'Não foi possível iniciar a conversa localmente. Reabra o aplicativo e tente novamente.',
         },
       ]);
       return;
@@ -141,20 +160,17 @@ export default function ChatScreen() {
     setIsSending(true);
 
     try {
-      const payloadMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...messages.map((message) => ({ role: message.role, content: message.content })),
-        { role: 'user', content: trimmed },
-      ];
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: payloadMessages,
+          conversationId,
+          userMessage: trimmed,
+          systemPrompt: SYSTEM_PROMPT,
           temperature: 0.6,
+          agent: 'companion-chat',
         }),
       });
 
@@ -166,10 +182,14 @@ export default function ChatScreen() {
       }
 
       const data: {
-        choices?: { message?: { content?: string } }[];
+        message?: { content?: string } | string;
+        conversationId?: string;
       } = await response.json();
 
-      const assistantText = data.choices?.[0]?.message?.content?.trim();
+      const assistantText =
+        typeof data?.message === 'string'
+          ? data.message.trim()
+          : data?.message?.content?.trim();
 
       if (!assistantText) {
         throw new Error('A resposta da IA veio vazia. Tente novamente em instantes.');
@@ -182,6 +202,10 @@ export default function ChatScreen() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      if (typeof data.conversationId === 'string' && data.conversationId.trim().length > 0) {
+        setConversationId(data.conversationId.trim());
+      }
     } catch (sendError) {
       const friendlyMessage =
         sendError instanceof Error
@@ -204,7 +228,7 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [input, messages]);
+  }, [conversationId, input, isHydrated, setConversationId, setMessages]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
@@ -283,11 +307,11 @@ export default function ChatScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={sendMessage}
-              disabled={isSending}
+              disabled={isSending || !isHydrated}
               style={({ pressed }) => [
                 styles.sendButton,
                 {
-                  backgroundColor: isSending
+                  backgroundColor: isSending || !isHydrated
                     ? colorScheme === 'dark'
                       ? '#1d4ed8'
                       : '#94a3b8'
