@@ -1,24 +1,77 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-const STORE_FILE = path.join(DATA_DIR, 'conversations.json');
+const STORE_FILE_NAME = 'conversations.json';
+const DEFAULT_DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const TEMP_DIR = path.join(
+  process.env.CONVERSATION_STORE_TMP ?? process.env.TEMP ?? process.env.TMP ?? '/tmp',
+  'daily-prayers'
+);
+
+let storeFilePath;
+let initializingStorePromise;
+
+const getCandidateDirectories = () => {
+  const candidates = [process.env.CONVERSATION_STORE_DIR, DEFAULT_DATA_DIR, TEMP_DIR];
+
+  return candidates
+    .filter((dir) => typeof dir === 'string' && dir.trim().length > 0)
+    .map((dir) => path.resolve(dir));
+};
 
 const ensureStoreReady = async () => {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  if (storeFilePath) {
+    return storeFilePath;
+  }
+
+  if (initializingStorePromise) {
+    return initializingStorePromise;
+  }
+
+  initializingStorePromise = (async () => {
+    const attempted = new Set();
+    let lastError;
+
+    for (const dir of getCandidateDirectories()) {
+      if (attempted.has(dir)) {
+        continue;
+      }
+
+      attempted.add(dir);
+
+      try {
+        await fs.mkdir(dir, { recursive: true });
+        const filePath = path.join(dir, STORE_FILE_NAME);
+
+        try {
+          await fs.access(filePath);
+        } catch {
+          await fs.writeFile(filePath, JSON.stringify({}), 'utf8');
+        }
+
+        storeFilePath = filePath;
+        return storeFilePath;
+      } catch (error) {
+        lastError = error;
+        console.warn(`Failed to initialize conversation store at "${dir}".`, error);
+      }
+    }
+
+    throw lastError ?? new Error('Unable to initialize a conversation store location.');
+  })();
 
   try {
-    await fs.access(STORE_FILE);
-  } catch {
-    await fs.writeFile(STORE_FILE, JSON.stringify({}), 'utf8');
+    return await initializingStorePromise;
+  } finally {
+    initializingStorePromise = null;
   }
 };
 
 const readStore = async () => {
-  await ensureStoreReady();
+  const filePath = await ensureStoreReady();
 
   try {
-    const raw = await fs.readFile(STORE_FILE, 'utf8');
+    const raw = await fs.readFile(filePath, 'utf8');
     if (!raw) {
       return {};
     }
@@ -32,14 +85,14 @@ const readStore = async () => {
     return {};
   } catch (error) {
     console.warn('Failed to read conversation store. Resetting file.', error);
-    await fs.writeFile(STORE_FILE, JSON.stringify({}), 'utf8');
+    await fs.writeFile(filePath, JSON.stringify({}), 'utf8');
     return {};
   }
 };
 
 const writeStore = async (store) => {
-  await ensureStoreReady();
-  await fs.writeFile(STORE_FILE, JSON.stringify(store), 'utf8');
+  const filePath = await ensureStoreReady();
+  await fs.writeFile(filePath, JSON.stringify(store), 'utf8');
 };
 
 const buildKey = (conversationId, agent) => {
@@ -59,10 +112,15 @@ const getConversation = async (conversationId, agent) => {
     return [];
   }
 
-  const store = await readStore();
-  const history = store[key];
+  try {
+    const store = await readStore();
+    const history = store[key];
 
-  return Array.isArray(history) ? history : [];
+    return Array.isArray(history) ? history : [];
+  } catch (error) {
+    console.warn('Conversation store unavailable. Returning empty history.', error);
+    return [];
+  }
 };
 
 const setConversation = async (conversationId, agent, messages) => {
@@ -72,9 +130,13 @@ const setConversation = async (conversationId, agent, messages) => {
     return;
   }
 
-  const store = await readStore();
-  store[key] = messages;
-  await writeStore(store);
+  try {
+    const store = await readStore();
+    store[key] = messages;
+    await writeStore(store);
+  } catch (error) {
+    console.warn('Failed to persist conversation history. Continuing without persistence.', error);
+  }
 };
 
 module.exports = {
