@@ -382,6 +382,8 @@ export default function CatechistScreen() {
             />
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Enviar mensagem"
+              accessibilityHint="Toque duas vezes para enviar sua mensagem."
               onPress={sendMessage}
               disabled={isBusy || trimmedInput.length === 0}
               style={({ pressed }) => [
