@@ -45,6 +45,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const typingMessageIdRef = useRef<string | null>(null);
 
   const palette = Colors[colorScheme];
   const { chatModel } = useModelSettings();
@@ -77,7 +78,23 @@ export default function ChatScreen() {
       content: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const typingId = `${Date.now()}-assistant-typing`;
+    const typingMessage: ChatMessage = {
+      id: typingId,
+      role: 'assistant',
+      content: 'Digitando...',
+    };
+
+    const previousTypingId = typingMessageIdRef.current;
+
+    setMessages((prev) => {
+      const withoutPreviousTyping = previousTypingId
+        ? prev.filter((message) => message.id !== previousTypingId)
+        : prev;
+
+      return [...withoutPreviousTyping, userMessage, typingMessage];
+    });
+    typingMessageIdRef.current = typingId;
     setInput('');
     setIsSending(true);
 
@@ -123,14 +140,20 @@ export default function ChatScreen() {
         content: assistantText,
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev.filter((message) => message.id !== typingId),
+        assistantMessage,
+      ]);
+      if (typingMessageIdRef.current === typingId) {
+        typingMessageIdRef.current = null;
+      }
     } catch (sendError) {
       const friendlyMessage =
         sendError instanceof Error
           ? sendError.message
           : 'Ocorreu um erro inesperado ao contatar a IA.';
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((message) => message.id !== typingId),
         {
           id: `${Date.now()}-assistant-error`,
           role: 'assistant',
@@ -143,6 +166,9 @@ export default function ChatScreen() {
           content: friendlyMessage,
         },
       ]);
+      if (typingMessageIdRef.current === typingId) {
+        typingMessageIdRef.current = null;
+      }
     } finally {
       setIsSending(false);
     }
