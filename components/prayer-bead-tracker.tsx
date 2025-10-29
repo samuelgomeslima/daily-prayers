@@ -185,7 +185,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                 styles.adjustButton,
                 {
                   borderColor,
-                  backgroundColor: surfaceMuted,
+                  backgroundColor: markerIdleColor,
                 },
                 pressed && { opacity: 0.6 },
                 targetRounds <= minimumTarget && styles.adjustButtonDisabled,
@@ -204,7 +204,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                 styles.adjustButton,
                 {
                   borderColor,
-                  backgroundColor: surfaceMuted,
+                  backgroundColor: markerIdleColor,
                 },
                 pressed && { opacity: 0.6 },
               ]}
@@ -255,7 +255,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                 styles.flowButton,
                 {
                   borderColor,
-                  backgroundColor: surfaceMuted,
+                  backgroundColor: markerIdleColor,
                 },
                 !previousMarkedBeadId && styles.flowButtonDisabled,
                 pressed && previousMarkedBeadId && { opacity: 0.7 },
