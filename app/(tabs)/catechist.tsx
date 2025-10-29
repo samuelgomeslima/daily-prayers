@@ -136,6 +136,83 @@ const createApiEndpoint = (path: string) => {
 
 const CATECHIST_ENDPOINT = createApiEndpoint('/api/catechist-agent');
 
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const RETRY_DELAYS_MS = [750, 1500];
+const MAX_REQUEST_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
+
+type RetryableError = Error & { retryable?: boolean; status?: number };
+
+const isRetryableError = (error: unknown) => {
+  if (!error) {
+    return false;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const retryable = (error as RetryableError).retryable;
+
+    if (typeof retryable === 'boolean') {
+      return retryable;
+    }
+
+    const status = (error as RetryableError).status;
+
+    if (typeof status === 'number') {
+      return status >= 500 || status === 429;
+    }
+  }
+
+  if (error instanceof TypeError) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (/timeout/i.test(message)) {
+    return true;
+  }
+
+  return false;
+};
+
+const mapErrorToFriendlyMessage = (error: unknown) => {
+  if (!error) {
+    return 'Não consegui responder desta vez. Tente novamente em instantes.';
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('unable to contact the catechist agent')) {
+    return 'O Assistente Catequista está indisponível no momento. Tente novamente em instantes.';
+  }
+
+  if (normalized.includes('a resposta do assistente catequista veio vazia')) {
+    return 'Não consegui concluir a resposta agora. Vou continuar aqui quando você tentar novamente.';
+  }
+
+  if (normalized.includes('must include a non-empty "input_as_text"')) {
+    return 'Não recebi nenhuma pergunta. Escreva sua dúvida para que eu possa ajudar.';
+  }
+
+  if (normalized.includes('não foi possível obter uma resposta')) {
+    return 'O Assistente Catequista não conseguiu responder agora. Vamos tentar novamente em instantes.';
+  }
+
+  if (normalized.includes('failed to fetch') || normalized.includes('network request failed')) {
+    return 'Não consegui me conectar agora. Verifique sua conexão com a internet e tente de novo.';
+  }
+
+  if (normalized.includes('timeout') || normalized.includes('tempo esgotado')) {
+    return 'O Assistente está demorando para responder. Tente fazer sua pergunta outra vez.';
+  }
+
+  return 'Não consegui responder desta vez. Tente novamente em instantes.';
+};
+
 const extractAssistantText = (payload: CatechistResponse) => {
   if (!payload) {
     return null;
@@ -248,26 +325,72 @@ export default function CatechistScreen() {
       setIsSending(true);
 
       try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            input_as_text: trimmed,
-            conversationId: conversationId ?? undefined,
-            model: catechistModel,
-          }),
-        });
+        const attemptRequest = async (): Promise<CatechistResponse> => {
+          let lastError: unknown = null;
 
-        if (!response.ok) {
-          const errorPayload = await response.json().catch(() => null);
-          const message =
-            errorPayload?.error?.message ?? 'Não foi possível obter uma resposta do Assistente Catequista no momento.';
-          throw new Error(message);
-        }
+          for (let attempt = 0; attempt < MAX_REQUEST_ATTEMPTS; attempt += 1) {
+            try {
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  input_as_text: trimmed,
+                  conversationId: conversationId ?? undefined,
+                  model: catechistModel,
+                }),
+              });
 
-        const data: CatechistResponse = await response.json();
+              if (!response.ok) {
+                let message = 'Não foi possível obter uma resposta do Assistente Catequista no momento.';
+                let errorPayload: unknown = null;
+
+                try {
+                  errorPayload = await response.json();
+                } catch {
+                  // ignore parsing errors
+                }
+
+                if (
+                  errorPayload &&
+                  typeof errorPayload === 'object' &&
+                  errorPayload !== null &&
+                  typeof (errorPayload as { error?: { message?: unknown } }).error?.message === 'string'
+                ) {
+                  message = ((errorPayload as { error?: { message?: string } }).error?.message ?? message).trim();
+                }
+
+                const httpError = new Error(message) as RetryableError;
+                httpError.retryable = response.status >= 500 || response.status === 429;
+                httpError.status = response.status;
+                throw httpError;
+              }
+
+              const data: CatechistResponse = await response.json();
+              return data;
+            } catch (requestError) {
+              lastError = requestError;
+              const shouldRetry = isRetryableError(requestError);
+
+              if (attempt < MAX_REQUEST_ATTEMPTS - 1 && shouldRetry) {
+                const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
+                await sleep(delay);
+                continue;
+              }
+
+              break;
+            }
+          }
+
+          if (lastError) {
+            throw lastError;
+          }
+
+          throw new Error('Não foi possível obter uma resposta do Assistente Catequista no momento.');
+        };
+
+        const data = await attemptRequest();
         const assistantText = extractAssistantText(data);
 
         if (!assistantText) {
@@ -296,24 +419,32 @@ export default function CatechistScreen() {
 
         return true;
       } catch (sendError) {
-        const friendlyMessage =
+        const friendlyMessage = mapErrorToFriendlyMessage(sendError);
+        const detailMessage =
           sendError instanceof Error
             ? sendError.message
             : 'Ocorreu um erro inesperado ao contatar o Assistente Catequista.';
-        setMessages((prev) => [
-          ...prev.filter((message) => message.id !== typingId),
-          {
-            id: `${Date.now()}-assistant-error`,
-            role: 'assistant',
-            content:
-              'Enfrentei um problema ao tentar responder. Confira sua conexão e tente novamente em instantes.',
-          },
-          {
-            id: `${Date.now()}-assistant-error-detail`,
-            role: 'assistant',
-            content: friendlyMessage,
-          },
-        ]);
+
+        setMessages((prev) => {
+          const baseMessages: ChatMessage[] = [
+            ...prev.filter((message) => message.id !== typingId),
+            {
+              id: `${Date.now()}-assistant-error`,
+              role: 'assistant',
+              content: friendlyMessage,
+            },
+          ];
+
+          if (__DEV__ && detailMessage && detailMessage !== friendlyMessage) {
+            baseMessages.push({
+              id: `${Date.now()}-assistant-error-detail`,
+              role: 'assistant',
+              content: detailMessage,
+            });
+          }
+
+          return baseMessages;
+        });
         if (typingMessageIdRef.current === typingId) {
           typingMessageIdRef.current = null;
         }
