@@ -25,6 +25,8 @@ const MAPPING = {
   'square.and.pencil': 'note-alt',
   'gearshape.fill': 'settings',
   'checkmark.circle.fill': 'check-circle',
+  'info.circle.fill': 'info',
+  'xmark.circle.fill': 'close',
 } as IconMapping;
 
 /**
