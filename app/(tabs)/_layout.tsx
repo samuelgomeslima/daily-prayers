@@ -20,6 +20,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: palette.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarLabelPosition: 'below-icon',
+        tabBarItemStyle: styles.tabBarItem,
+        tabBarIconStyle: styles.tabBarIcon,
         tabBarStyle: [
           styles.tabBar,
           tabBarStyle,
@@ -113,6 +116,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     height: 82,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  tabBarItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBarIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 12,
