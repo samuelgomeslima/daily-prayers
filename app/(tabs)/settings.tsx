@@ -8,12 +8,14 @@ import {
   View,
 } from 'react-native';
 
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { resolveChatEndpoint } from '@/utils/chat-endpoint';
 
 const MODEL_LABELS = {
@@ -34,7 +36,6 @@ type ModelOptionButtonProps = {
   disabled: boolean;
   onPress: () => void;
   accentColor: string;
-  isDark: boolean;
 };
 
 function ModelOptionButton({
@@ -43,19 +44,18 @@ function ModelOptionButton({
   disabled,
   onPress,
   accentColor,
-  isDark,
 }: ModelOptionButtonProps) {
+  const surfaceMuted = useThemeColor({}, 'surfaceMuted');
+  const borderColor = useThemeColor({}, 'border');
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
         styles.optionButton,
-        selected && {
-          borderColor: accentColor,
-          backgroundColor: isDark
-            ? 'rgba(56, 189, 248, 0.16)'
-            : 'rgba(10, 126, 164, 0.12)',
+        {
+          borderColor,
+          backgroundColor: selected ? `${accentColor}1A` : surfaceMuted,
         },
         pressed && !disabled && { opacity: 0.85 },
         disabled && { opacity: 0.6 },
@@ -73,6 +73,7 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
+  const mutedText = useThemeColor({ light: '#6D73A8', dark: '#A3AAD9' }, 'icon');
 
   const [availability, setAvailability] = useState<AiAvailabilityState>({ status: 'checking' });
   const isMountedRef = useRef(true);
@@ -224,6 +225,8 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
+        <SaintJosephLily size={240} opacity={0.1} style={styles.lilyTop} pointerEvents="none" />
+        <SaintJosephLily size={200} opacity={0.08} style={styles.lilyBottom} pointerEvents="none" />
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -231,7 +234,7 @@ export default function SettingsScreen() {
           <ThemedText type="title" style={styles.heading}>
             Configurações
           </ThemedText>
-          <ThemedText style={styles.intro}>
+          <ThemedText style={[styles.intro, { color: mutedText }]}>
             Personalize quais modelos de IA serão utilizados nos assistentes do
             aplicativo.
           </ThemedText>
@@ -312,7 +315,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Assistente Catequista
             </ThemedText>
-            <ThemedText style={styles.sectionDescription}>
+            <ThemedText style={[styles.sectionDescription, { color: mutedText }]}>
               Define qual modelo responde às suas perguntas com base nas obras
               católicas disponíveis.
             </ThemedText>
@@ -324,7 +327,6 @@ export default function SettingsScreen() {
                 onPress={() => setCatechistModel(item.value)}
                 disabled={isLoading}
                 accentColor={palette.tint}
-                isDark={isDark}
               />
             ))}
           </View>
@@ -333,7 +335,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               IA Católica
             </ThemedText>
-            <ThemedText style={styles.sectionDescription}>
+            <ThemedText style={[styles.sectionDescription, { color: mutedText }]}>
               Escolhe o modelo usado na experiência de chat espiritual e de
               orientação pastoral.
             </ThemedText>
@@ -345,7 +347,6 @@ export default function SettingsScreen() {
                 onPress={() => setChatModel(item.value)}
                 disabled={isLoading}
                 accentColor={palette.tint}
-                isDark={isDark}
               />
             ))}
           </View>
@@ -361,6 +362,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
   },
   content: {
     padding: 24,
@@ -380,6 +383,10 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     borderWidth: 1,
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 2,
   },
   aiStatusHeader: {
     flexDirection: 'row',
@@ -438,7 +445,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(107, 114, 128, 0.12)',
+    backgroundColor: 'rgba(125, 112, 242, 0.08)',
   },
   loadingText: {
     fontSize: 14,
@@ -452,11 +459,9 @@ const styles = StyleSheet.create({
   sectionDescription: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#6B7280',
   },
   optionButton: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -464,9 +469,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 1,
   },
   optionLabel: {
     fontSize: 16,
     flex: 1,
+  },
+  lilyTop: {
+    position: 'absolute',
+    top: -60,
+    right: -50,
+  },
+  lilyBottom: {
+    position: 'absolute',
+    bottom: -80,
+    left: -30,
+    transform: [{ scaleX: -1 }],
   },
 });

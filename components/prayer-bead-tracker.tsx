@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 import { ThemedText } from './themed-text';
@@ -33,11 +34,16 @@ type PrayerBeadTrackerProps = {
 };
 
 export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
   const accentColor = useThemeColor({}, 'tint');
   const iconColor = useThemeColor({}, 'icon');
   const textColor = useThemeColor({}, 'text');
-  const backgroundColor = useThemeColor({}, 'background');
-  const markerIdleColor = useThemeColor({ light: '#E5ECF6', dark: '#1E2732' }, 'background');
+  const surfaceColor = useThemeColor({}, 'surface');
+  const markerIdleColor = useThemeColor({}, 'surfaceMuted');
+  const borderColor = useThemeColor({}, 'border');
+  const overlayColor = useThemeColor({}, 'overlay');
+  const mutedText = useThemeColor({ light: '#6E76A4', dark: '#9EA6D9' }, 'icon');
 
   const totalBeads = useMemo(
     () => sequence.sections.reduce((total, section) => total + section.beads.length, 0),
@@ -154,7 +160,11 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView
+      style={[styles.container, { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}1F` }]}
+      lightColor={Colors.light.surface}
+      darkColor={Colors.dark.surface}
+    >
       <View style={styles.header}>
         <ThemedText type="subtitle" style={[styles.title, { fontFamily: Fonts.serif }] }>
           {sequence.name}
@@ -173,6 +183,10 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               disabled={targetRounds <= minimumTarget}
               style={({ pressed }) => [
                 styles.adjustButton,
+                {
+                  borderColor,
+                  backgroundColor: markerIdleColor,
+                },
                 pressed && { opacity: 0.6 },
                 targetRounds <= minimumTarget && styles.adjustButtonDisabled,
               ]}
@@ -181,12 +195,19 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
             >
               <ThemedText style={styles.adjustButtonLabel}>−</ThemedText>
             </Pressable>
-            <View style={styles.targetBadge}>
+            <View style={[styles.targetBadge, { backgroundColor: overlayColor }] }>
               <ThemedText style={styles.targetBadgeLabel}>{targetRounds}</ThemedText>
             </View>
             <Pressable
               onPress={() => adjustTargetRounds(1)}
-              style={({ pressed }) => [styles.adjustButton, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [
+                styles.adjustButton,
+                {
+                  borderColor,
+                  backgroundColor: markerIdleColor,
+                },
+                pressed && { opacity: 0.6 },
+              ]}
               accessibilityLabel="Aumentar meta de terços"
               accessibilityRole="button"
             >
@@ -194,13 +215,13 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
             </Pressable>
           </View>
         </View>
-        <ThemedText style={styles.roundHelperText}>
+        <ThemedText style={[styles.roundHelperText, { color: mutedText }]}>
           {goalReached
             ? 'Meta alcançada! Você pode iniciar outro terço quando desejar.'
             : `Terço atual: ${currentRoundNumber} de ${targetRounds}`}
         </ThemedText>
         <View style={styles.progressRow}>
-          <View style={styles.progressIndicator}>
+        <View style={[styles.progressIndicator, { backgroundColor: overlayColor }]}>
             <View
               style={[
                 styles.progressFill,
@@ -208,7 +229,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               ]}
             />
           </View>
-          <ThemedText style={styles.progressText}>
+          <ThemedText style={[styles.progressText, { color: mutedText }]}>
             {markedBeads.size} / {totalBeads} contas
           </ThemedText>
           <Pressable onPress={reset} style={styles.resetButton} accessibilityRole="button">
@@ -232,6 +253,10 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               disabled={!previousMarkedBeadId}
               style={({ pressed }) => [
                 styles.flowButton,
+                {
+                  borderColor,
+                  backgroundColor: markerIdleColor,
+                },
                 !previousMarkedBeadId && styles.flowButtonDisabled,
                 pressed && previousMarkedBeadId && { opacity: 0.7 },
               ]}
@@ -246,6 +271,10 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               style={({ pressed }) => [
                 styles.flowButton,
                 styles.flowButtonPrimary,
+                {
+                  borderColor,
+                  backgroundColor: `${accentColor}1A`,
+                },
                 !currentBeadId && styles.flowButtonDisabled,
                 pressed && currentBeadId && { opacity: 0.7 },
               ]}
@@ -258,11 +287,11 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
             </Pressable>
           </View>
           {currentBeadInfo ? (
-            <ThemedText style={styles.currentBeadHelper}>
+            <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
               Próxima oração: {currentBeadInfo.label} ({currentBeadInfo.sectionTitle})
             </ThemedText>
           ) : (
-            <ThemedText style={styles.currentBeadHelper}>
+            <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
               Todas as contas deste terço foram marcadas.
             </ThemedText>
           )}
@@ -291,7 +320,9 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               {section.title}
             </ThemedText>
             {section.description ? (
-              <ThemedText style={styles.sectionDescription}>{section.description}</ThemedText>
+              <ThemedText style={[styles.sectionDescription, { color: mutedText }]}>
+                {section.description}
+              </ThemedText>
             ) : null}
             <View style={styles.beadRow}>
               {section.beads.map((bead) => {
@@ -313,7 +344,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                           ? accentColor
                           : bead.type === 'marker'
                             ? markerIdleColor
-                            : backgroundColor,
+                            : surfaceColor,
                         opacity: isCurrent || isMarked ? 1 : 0.55,
                       },
                       isCurrent && styles.currentBead,
@@ -347,15 +378,15 @@ export type { PrayerBead, PrayerSection, PrayerSequence };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 24,
     gap: 16,
-    elevation: 1,
-    shadowColor: '#00000025',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   header: {
     gap: 8,
@@ -403,8 +434,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#00000020',
-    backgroundColor: '#00000008',
   },
   adjustButtonDisabled: {
     opacity: 0.4,
@@ -418,7 +447,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#00000012',
     alignItems: 'center',
   },
   targetBadgeLabel: {
@@ -427,13 +455,11 @@ const styles = StyleSheet.create({
   },
   roundHelperText: {
     fontSize: 13,
-    color: '#687076',
   },
   progressIndicator: {
     flex: 1,
     height: 8,
     borderRadius: 999,
-    backgroundColor: '#00000012',
     overflow: 'hidden',
   },
   progressFill: {
@@ -465,13 +491,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#00000018',
-    backgroundColor: '#00000008',
     alignItems: 'center',
   },
-  flowButtonPrimary: {
-    backgroundColor: '#00000012',
-  },
+  flowButtonPrimary: {},
   flowButtonDisabled: {
     opacity: 0.4,
   },
@@ -484,7 +506,6 @@ const styles = StyleSheet.create({
   currentBeadHelper: {
     marginTop: 8,
     fontSize: 13,
-    color: '#687076',
   },
   completeRoundButton: {
     marginTop: 12,
@@ -507,7 +528,6 @@ const styles = StyleSheet.create({
   },
   sectionDescription: {
     lineHeight: 20,
-    color: '#687076',
   },
   beadRow: {
     flexDirection: 'row',

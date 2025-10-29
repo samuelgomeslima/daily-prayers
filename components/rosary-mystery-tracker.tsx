@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 import { ThemedText } from './themed-text';
@@ -19,9 +20,12 @@ type RosaryMysteryTrackerProps = {
 };
 
 export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
   const accentColor = useThemeColor({}, 'tint');
-  const cardBackground = useThemeColor({ light: '#F5EFFA', dark: '#1F1527' }, 'background');
-  const mutedText = useThemeColor({ light: '#6C6C6C', dark: '#9BA1A6' }, 'text');
+  const mutedText = useThemeColor({ light: '#686FA3', dark: '#9FA8D9' }, 'icon');
+  const borderColor = useThemeColor({}, 'border');
+  const surfaceMuted = useThemeColor({}, 'surfaceMuted');
 
   const defaultSetId = sets[0]?.id;
   const [selectedSetId, setSelectedSetId] = useState(defaultSetId ?? '');
@@ -86,7 +90,14 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
               onPress={() => setSelectedSetId(set.id)}
               style={({ pressed }) => [
                 styles.tabButton,
-                isSelected && [styles.tabButtonActive, { borderColor: accentColor }],
+                {
+                  borderColor,
+                  backgroundColor: surfaceMuted,
+                },
+                isSelected && [
+                  styles.tabButtonActive,
+                  { borderColor: accentColor, backgroundColor: `${accentColor}1A` },
+                ],
                 pressed && { opacity: 0.7 },
               ]}
               accessibilityRole="button"
@@ -94,7 +105,10 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
             >
               <ThemedText
                 type="defaultSemiBold"
-                style={[styles.tabButtonLabel, isSelected && { color: accentColor }]}
+                style={[
+                  styles.tabButtonLabel,
+                  { color: isSelected ? accentColor : mutedText },
+                ]}
               >
                 {set.title}
               </ThemedText>
@@ -103,19 +117,27 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
         })}
       </View>
 
-      <ThemedView style={[styles.card, { backgroundColor: cardBackground }] }>
+      <ThemedView
+        style={[styles.card, { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}14` }]}
+        lightColor={Colors.light.surface}
+        darkColor={Colors.dark.surface}
+      >
         <ThemedText type="subtitle" style={[styles.cardTitle, { fontFamily: Fonts.serif }]}>
           {currentSet.title}
         </ThemedText>
         <ThemedText style={[styles.cardDays, { color: mutedText }]}>{currentSet.days}</ThemedText>
 
         <View style={styles.cardHeaderRow}>
-          <ThemedText style={styles.progressLabel}>
+          <ThemedText style={[styles.progressLabel, { color: mutedText }] }>
             Mistérios concluídos: {completedCount} / {currentSet.mysteries.length}
           </ThemedText>
           <Pressable
             onPress={resetSetProgress}
-            style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [
+              styles.resetButton,
+              { backgroundColor: `${accentColor}14` },
+              pressed && { opacity: 0.6 },
+            ]}
             accessibilityRole="button"
           >
             <ThemedText type="defaultSemiBold" style={[styles.resetLabel, { color: accentColor }]}>
@@ -134,6 +156,10 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
                 onPress={() => toggleMystery(index)}
                 style={({ pressed }) => [
                   styles.mysteryItem,
+                  {
+                    backgroundColor: surfaceMuted,
+                    borderColor,
+                  },
                   pressed && { opacity: 0.7 },
                 ]}
                 accessibilityRole="checkbox"
@@ -142,7 +168,7 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
                 <View
                   style={[
                     styles.checkbox,
-                    { borderColor: isChecked ? accentColor : '#00000030' },
+                    { borderColor: isChecked ? accentColor : borderColor },
                     isChecked && { backgroundColor: accentColor },
                   ]}
                 />
@@ -170,12 +196,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#00000018',
-    backgroundColor: '#00000008',
   },
-  tabButtonActive: {
-    backgroundColor: '#00000012',
-  },
+  tabButtonActive: {},
   tabButtonLabel: {
     fontSize: 13,
   },
@@ -183,6 +205,11 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     gap: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    elevation: 1,
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
   },
   cardTitle: {
     fontSize: 18,
@@ -203,8 +230,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
   },
   resetButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
   },
   resetLabel: {
@@ -217,7 +244,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   checkbox: {
     width: 18,

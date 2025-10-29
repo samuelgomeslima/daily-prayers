@@ -11,9 +11,11 @@ import {
   View,
 } from 'react-native';
 
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 type Note = {
@@ -91,12 +93,20 @@ export default function NotesScreen() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const inputBackground = useThemeColor({ light: '#F4F4F5', dark: '#1F252F' }, 'background');
-  const inputBorder = useThemeColor({ light: '#D9DFE7', dark: '#2A313C' }, 'icon');
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
+
+  const surface = useThemeColor({}, 'surface');
+  const surfaceMuted = useThemeColor({}, 'surfaceMuted');
+  const borderColor = useThemeColor({}, 'border');
   const inputText = useThemeColor({}, 'text');
-  const placeholderColor = useThemeColor({ light: '#9AA0A9', dark: '#6B7280' }, 'icon');
+  const placeholderColor = useThemeColor({ light: '#8087BD', dark: '#9DA6E5' }, 'icon');
   const accentColor = useThemeColor({}, 'tint');
-  const mutedText = useThemeColor({ light: '#6B7280', dark: '#9BA1A6' }, 'text');
+  const mutedText = useThemeColor({ light: '#646C9F', dark: '#A0A8D6' }, 'icon');
+  const overlayColor = useThemeColor({}, 'overlay');
+
+  const inputBackground = surface;
+  const inputBorder = borderColor;
 
   useEffect(() => {
     let isMounted = true;
@@ -277,6 +287,11 @@ export default function NotesScreen() {
           onPress={() => handleSelectNote(item)}
           style={({ pressed }) => [
             styles.noteCard,
+            {
+              backgroundColor: surface,
+              borderColor: isActive ? accentColor : `${borderColor}A6`,
+              shadowColor: `${palette.tint}24`,
+            },
             pressed && styles.noteCardPressed,
             isActive && styles.noteCardActive,
           ]}>
@@ -298,8 +313,22 @@ export default function NotesScreen() {
               accessibilityHint="Remove a anotação da lista"
               accessibilityRole="button"
               onPress={() => handleDeleteNote(item.id)}
-              style={({ pressed }) => [styles.deleteButton, pressed && styles.deleteButtonPressed]}>
-              <ThemedText style={styles.deleteButtonLabel}>Excluir</ThemedText>
+              style={({ pressed }) => [
+                styles.deleteButton,
+                {
+                  borderColor: colorScheme === 'dark' ? '#8F3A5C' : '#F7B7C6',
+                  backgroundColor: overlayColor,
+                },
+                pressed && styles.deleteButtonPressed,
+              ]}>
+              <ThemedText
+                style={[
+                  styles.deleteButtonLabel,
+                  { color: colorScheme === 'dark' ? '#FFB4C2' : '#C81F4A' },
+                ]}
+              >
+                Excluir
+              </ThemedText>
             </Pressable>
             {isActive ? (
               <ThemedText style={[styles.editingBadge, { color: accentColor }]}>Editando</ThemedText>
@@ -317,6 +346,8 @@ export default function NotesScreen() {
       style={styles.flex}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
       <ThemedView style={styles.container}>
+        <SaintJosephLily size={200} opacity={0.12} style={styles.lilyTop} pointerEvents="none" />
+        <SaintJosephLily size={160} opacity={0.1} style={styles.lilyBottom} pointerEvents="none" />
         <FlatList
           data={filteredNotes}
           keyExtractor={(item) => item.id}
@@ -346,8 +377,8 @@ export default function NotesScreen() {
               />
               <ThemedView
                 style={styles.formCard}
-                lightColor="#F8FAFC"
-                darkColor="#101720">
+                lightColor={Colors.light.surface}
+                darkColor={Colors.dark.surface}>
                 <ThemedText type="subtitle" style={styles.formTitle}>
                   {editingNoteId ? 'Editar anotação' : 'Nova anotação'}
                 </ThemedText>
@@ -384,6 +415,10 @@ export default function NotesScreen() {
                       onPress={resetForm}
                       style={({ pressed }) => [
                         styles.secondaryButton,
+                        {
+                          borderColor,
+                          backgroundColor: surfaceMuted,
+                        },
                         pressed && styles.secondaryButtonPressed,
                       ]}>
                       <ThemedText style={styles.secondaryButtonLabel}>Cancelar</ThemedText>
@@ -408,14 +443,17 @@ export default function NotesScreen() {
             </View>
           }
           ListEmptyComponent={
-            <View style={styles.emptyState}>
+            <ThemedView
+              style={styles.emptyState}
+              lightColor={Colors.light.surfaceMuted}
+              darkColor={Colors.dark.surfaceMuted}>
               <ThemedText style={styles.emptyStateTitle}>Nenhuma anotação encontrada</ThemedText>
               <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
                 {searchTerm
                   ? 'Tente ajustar os termos de busca para localizar uma anotação existente.'
                   : 'Escreva sua primeira anotação acima para organizar pensamentos e inspirações.'}
               </ThemedText>
-            </View>
+            </ThemedView>
           }
           keyboardShouldPersistTaps="handled"
         />
@@ -430,14 +468,28 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
   },
   listContent: {
-    padding: 20,
-    paddingBottom: 48,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 56,
     gap: 16,
   },
   header: {
     gap: 16,
+  },
+  lilyTop: {
+    position: 'absolute',
+    top: -60,
+    right: -40,
+  },
+  lilyBottom: {
+    position: 'absolute',
+    bottom: -70,
+    left: -30,
+    transform: [{ scaleX: -1 }],
   },
   screenTitle: {
     fontFamily: Fonts.serif,
@@ -464,6 +516,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     gap: 16,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 2,
   },
   formTitle: {
     fontFamily: Fonts.rounded,
@@ -493,7 +549,6 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
@@ -510,14 +565,17 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 1,
   },
   noteCardPressed: {
     opacity: 0.85,
   },
   noteCardActive: {
-    borderColor: '#0a7ea4',
+    shadowOpacity: 0.25,
+    elevation: 2,
   },
   noteCardHeader: {
     flexDirection: 'row',
@@ -549,13 +607,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#FECACA',
   },
   deleteButtonPressed: {
     opacity: 0.7,
   },
   deleteButtonLabel: {
-    color: '#DC2626',
     fontWeight: '600',
   },
   editingBadge: {
@@ -567,6 +623,11 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     alignItems: 'center',
     gap: 8,
+    borderRadius: 18,
+    paddingHorizontal: 24,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   emptyStateTitle: {
     fontSize: 18,

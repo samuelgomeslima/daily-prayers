@@ -69,11 +69,15 @@ const styles = StyleSheet.create({
   header: {
     height: HEADER_HEIGHT,
     overflow: 'hidden',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
   content: {
     flex: 1,
-    padding: 32,
-    gap: 16,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 48,
+    gap: 20,
     overflow: 'hidden',
   },
 });

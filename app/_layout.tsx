@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { ModelSettingsProvider } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -13,9 +14,36 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  const lightTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: Colors.light.background,
+      primary: Colors.light.tint,
+      card: Colors.light.surface,
+      text: Colors.light.text,
+      border: Colors.light.border,
+    },
+  };
+
+  const darkTheme = {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      background: Colors.dark.background,
+      primary: Colors.dark.tint,
+      card: Colors.dark.surface,
+      text: Colors.dark.text,
+      border: Colors.dark.border,
+    },
+  };
+
+  const navigationTheme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const statusBarStyle = colorScheme === 'dark' ? 'light' : 'dark';
+
   return (
     <ModelSettingsProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={navigationTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
@@ -23,7 +51,7 @@ export default function RootLayout() {
             options={{ presentation: 'modal', title: 'Modal' }}
           />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style={statusBarStyle} backgroundColor={navigationTheme.colors.background} />
       </ThemeProvider>
     </ModelSettingsProvider>
   );
