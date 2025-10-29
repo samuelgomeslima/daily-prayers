@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedRef,
@@ -7,6 +7,7 @@ import Animated, {
   useScrollOffset,
 } from 'react-native-reanimated';
 
+import { LilyBackground } from '@/components/lily-background';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -57,7 +58,10 @@ export default function ParallaxScrollView({
         ]}>
         {headerImage}
       </Animated.View>
-      <ThemedView style={styles.content}>{children}</ThemedView>
+      <ThemedView style={styles.contentWrapper}>
+        <LilyBackground style={styles.decorations} />
+        <View style={styles.content}>{children}</View>
+      </ThemedView>
     </Animated.ScrollView>
   );
 }
@@ -70,10 +74,17 @@ const styles = StyleSheet.create({
     height: HEADER_HEIGHT,
     overflow: 'hidden',
   },
+  contentWrapper: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  decorations: {
+    ...StyleSheet.absoluteFillObject,
+  },
   content: {
     flex: 1,
     padding: 32,
     gap: 16,
-    overflow: 'hidden',
   },
 });

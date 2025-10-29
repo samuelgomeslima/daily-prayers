@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -33,11 +34,15 @@ type PrayerBeadTrackerProps = {
 };
 
 export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
   const accentColor = useThemeColor({}, 'tint');
-  const iconColor = useThemeColor({}, 'icon');
   const textColor = useThemeColor({}, 'text');
   const backgroundColor = useThemeColor({}, 'background');
-  const markerIdleColor = useThemeColor({ light: '#E5ECF6', dark: '#1E2732' }, 'background');
+  const markerIdleColor = colorScheme === 'dark' ? palette.surfaceSecondary : palette.surfaceSecondary;
+  const translucentSurface = colorScheme === 'dark' ? 'rgba(184, 196, 255, 0.18)' : 'rgba(123, 116, 242, 0.12)';
+  const translucentOutline = colorScheme === 'dark' ? 'rgba(184, 196, 255, 0.3)' : 'rgba(123, 116, 242, 0.22)';
+  const mutedText = palette.textMuted;
 
   const totalBeads = useMemo(
     () => sequence.sections.reduce((total, section) => total + section.beads.length, 0),
@@ -154,12 +159,18 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView
+      style={[styles.container, { shadowColor: palette.shadow, borderColor: palette.border }]}
+      lightColor={Colors.light.surface}
+      darkColor={Colors.dark.surface}
+    >
       <View style={styles.header}>
         <ThemedText type="subtitle" style={[styles.title, { fontFamily: Fonts.serif }] }>
           {sequence.name}
         </ThemedText>
-        <ThemedText style={styles.description}>{sequence.description}</ThemedText>
+        <ThemedText style={[styles.description, { color: mutedText }]}>
+          {sequence.description}
+        </ThemedText>
         <View style={styles.roundSummary}>
           <View style={styles.roundCounter}>
             <ThemedText style={styles.roundCounterLabel}>Terços rezados</ThemedText>
@@ -173,6 +184,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               disabled={targetRounds <= minimumTarget}
               style={({ pressed }) => [
                 styles.adjustButton,
+                { borderColor: palette.border, backgroundColor: translucentSurface },
                 pressed && { opacity: 0.6 },
                 targetRounds <= minimumTarget && styles.adjustButtonDisabled,
               ]}
@@ -181,12 +193,18 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
             >
               <ThemedText style={styles.adjustButtonLabel}>−</ThemedText>
             </Pressable>
-            <View style={styles.targetBadge}>
+            <View
+              style={[styles.targetBadge, { backgroundColor: translucentSurface, borderColor: translucentOutline }]}
+            >
               <ThemedText style={styles.targetBadgeLabel}>{targetRounds}</ThemedText>
             </View>
             <Pressable
               onPress={() => adjustTargetRounds(1)}
-              style={({ pressed }) => [styles.adjustButton, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [
+                styles.adjustButton,
+                { borderColor: palette.border, backgroundColor: translucentSurface },
+                pressed && { opacity: 0.6 },
+              ]}
               accessibilityLabel="Aumentar meta de terços"
               accessibilityRole="button"
             >
@@ -194,13 +212,13 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
             </Pressable>
           </View>
         </View>
-        <ThemedText style={styles.roundHelperText}>
+        <ThemedText style={[styles.roundHelperText, { color: mutedText }]}>
           {goalReached
             ? 'Meta alcançada! Você pode iniciar outro terço quando desejar.'
             : `Terço atual: ${currentRoundNumber} de ${targetRounds}`}
         </ThemedText>
         <View style={styles.progressRow}>
-          <View style={styles.progressIndicator}>
+          <View style={[styles.progressIndicator, { backgroundColor: translucentSurface }] }>
             <View
               style={[
                 styles.progressFill,
@@ -232,8 +250,9 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               disabled={!previousMarkedBeadId}
               style={({ pressed }) => [
                 styles.flowButton,
+                { borderColor: translucentOutline, backgroundColor: translucentSurface },
                 !previousMarkedBeadId && styles.flowButtonDisabled,
-                pressed && previousMarkedBeadId && { opacity: 0.7 },
+                pressed && previousMarkedBeadId && { opacity: 0.75 },
               ]}
               accessibilityRole="button"
               accessibilityLabel="Voltar uma conta"
@@ -246,8 +265,9 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               style={({ pressed }) => [
                 styles.flowButton,
                 styles.flowButtonPrimary,
+                { borderColor: translucentOutline, backgroundColor: translucentSurface },
                 !currentBeadId && styles.flowButtonDisabled,
-                pressed && currentBeadId && { opacity: 0.7 },
+                pressed && currentBeadId && { opacity: 0.85 },
               ]}
               accessibilityRole="button"
               accessibilityLabel="Avançar para a próxima conta"
@@ -258,11 +278,11 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
             </Pressable>
           </View>
           {currentBeadInfo ? (
-            <ThemedText style={styles.currentBeadHelper}>
+            <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
               Próxima oração: {currentBeadInfo.label} ({currentBeadInfo.sectionTitle})
             </ThemedText>
           ) : (
-            <ThemedText style={styles.currentBeadHelper}>
+            <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
               Todas as contas deste terço foram marcadas.
             </ThemedText>
           )}
@@ -272,11 +292,15 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               style={({ pressed }) => [
                 styles.completeRoundButton,
                 { backgroundColor: accentColor },
-                pressed && { opacity: 0.8 },
+                pressed && { opacity: 0.9 },
               ]}
               accessibilityRole="button"
             >
-              <ThemedText style={styles.completeRoundLabel}>
+              <ThemedText
+                style={styles.completeRoundLabel}
+                lightColor={Colors.light.surface}
+                darkColor={Colors.light.surface}
+              >
                 Registrar terço concluído
               </ThemedText>
             </Pressable>
@@ -308,13 +332,13 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                       bead.type === 'large' && styles.largeBead,
                       bead.type === 'marker' && styles.markerBead,
                       {
-                        borderColor: isMarked ? accentColor : iconColor,
+                        borderColor: isMarked ? accentColor : translucentOutline,
                         backgroundColor: isMarked
                           ? accentColor
                           : bead.type === 'marker'
                             ? markerIdleColor
-                            : backgroundColor,
-                        opacity: isCurrent || isMarked ? 1 : 0.55,
+                            : translucentSurface,
+                        opacity: isCurrent || isMarked ? 1 : 0.7,
                       },
                       isCurrent && styles.currentBead,
                       pressed && { opacity: 0.7 },
@@ -330,7 +354,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               {section.beads.map((bead) => (
                 <ThemedText
                   key={`${bead.id}-label`}
-                  style={[styles.beadLabel, { color: textColor }]}
+                  style={[styles.beadLabel, { color: mutedText }]}
                   numberOfLines={1}>
                   {bead.label}
                 </ThemedText>
@@ -352,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 16,
     elevation: 1,
-    shadowColor: '#00000025',
+    borderWidth: StyleSheet.hairlineWidth * 2,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -402,9 +426,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#00000020',
-    backgroundColor: '#00000008',
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   adjustButtonDisabled: {
     opacity: 0.4,
@@ -418,8 +440,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#00000012',
     alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   targetBadgeLabel: {
     fontFamily: Fonts.mono,
@@ -427,13 +449,11 @@ const styles = StyleSheet.create({
   },
   roundHelperText: {
     fontSize: 13,
-    color: '#687076',
   },
   progressIndicator: {
     flex: 1,
     height: 8,
     borderRadius: 999,
-    backgroundColor: '#00000012',
     overflow: 'hidden',
   },
   progressFill: {
@@ -464,13 +484,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#00000018',
-    backgroundColor: '#00000008',
+    borderWidth: StyleSheet.hairlineWidth * 2,
     alignItems: 'center',
   },
   flowButtonPrimary: {
-    backgroundColor: '#00000012',
   },
   flowButtonDisabled: {
     opacity: 0.4,
@@ -484,7 +501,6 @@ const styles = StyleSheet.create({
   currentBeadHelper: {
     marginTop: 8,
     fontSize: 13,
-    color: '#687076',
   },
   completeRoundButton: {
     marginTop: 12,
@@ -494,7 +510,6 @@ const styles = StyleSheet.create({
   },
   completeRoundLabel: {
     fontWeight: '600',
-    color: '#ffffff',
   },
   sections: {
     gap: 20,
@@ -507,7 +522,6 @@ const styles = StyleSheet.create({
   },
   sectionDescription: {
     lineHeight: 20,
-    color: '#687076',
   },
   beadRow: {
     flexDirection: 'row',

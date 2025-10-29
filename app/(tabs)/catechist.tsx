@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { LilyBackground } from '@/components/lily-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -313,22 +314,21 @@ export default function CatechistScreen() {
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
       const isUser = item.role === 'user';
-      const backgroundColor = isUser
-        ? colorScheme === 'dark'
-          ? '#1d4ed8'
-          : palette.tint
+      const bubbleBackground = isUser
+        ? palette.tint
         : colorScheme === 'dark'
-          ? '#1f2937'
-          : '#f8fafc';
-      const textColor = isUser
-        ? '#fff'
-        : colorScheme === 'dark'
-          ? '#e2e8f0'
-          : palette.text;
+          ? palette.surfaceSecondary
+          : palette.surface;
+      const textColor = isUser ? Colors.light.surface : palette.text;
 
       return (
         <View style={[styles.messageWrapper, isUser ? styles.messageRight : styles.messageLeft]}>
-          <View style={[styles.messageBubble, { backgroundColor }]}>
+          <View
+            style={[
+              styles.messageBubble,
+              { backgroundColor: bubbleBackground, borderColor: isUser ? palette.tint : palette.border },
+            ]}
+          >
             <ThemedText style={[styles.messageAuthor, { color: textColor }]} type="defaultSemiBold">
               {isUser ? 'Você' : 'Assistente Catequista'}
             </ThemedText>
@@ -342,7 +342,7 @@ export default function CatechistScreen() {
     [colorScheme, palette]
   );
 
-  const screenBackground = colorScheme === 'dark' ? '#0f172a' : palette.background;
+  const screenBackground = palette.background;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: screenBackground }}>
@@ -351,6 +351,7 @@ export default function CatechistScreen() {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
         <ThemedView style={[styles.container, { backgroundColor: screenBackground }]}>
+          <LilyBackground style={styles.decorations} variant="compact" />
           <FlatList
             ref={listRef}
             data={messages}
@@ -365,21 +366,23 @@ export default function CatechistScreen() {
             style={[
               styles.inputContainer,
               {
-                borderTopColor: colorScheme === 'dark' ? '#1f2937' : '#cbd5f5',
-                backgroundColor: colorScheme === 'dark' ? '#0f172a' : palette.background,
+                borderTopColor: palette.border,
+                backgroundColor: palette.surface,
+                shadowColor: palette.shadow,
               },
             ]}>
             <TextInput
               value={input}
               onChangeText={setInput}
               placeholder="Pergunte algo sobre a fé católica..."
-              placeholderTextColor={colorScheme === 'dark' ? '#64748b' : '#94a3b8'}
+              placeholderTextColor={palette.textMuted}
               style={[
                 styles.textInput,
                 {
-                  borderColor: colorScheme === 'dark' ? '#1f2937' : '#cbd5f5',
-                  backgroundColor: colorScheme === 'dark' ? '#111827' : '#fff',
-                  color: colorScheme === 'dark' ? '#f8fafc' : palette.text,
+                  borderColor: palette.border,
+                  backgroundColor:
+                    colorScheme === 'dark' ? palette.surfaceSecondary : palette.surface,
+                  color: palette.text,
                 },
               ]}
               multiline
@@ -394,22 +397,18 @@ export default function CatechistScreen() {
                   styles.sendButton,
                   {
                     backgroundColor: isBusy
-                      ? colorScheme === 'dark'
-                        ? '#1d4ed8'
-                        : '#94a3b8'
-                      : colorScheme === 'dark'
-                        ? '#2563eb'
-                        : palette.tint,
+                      ? palette.tabIconDefault
+                      : palette.tint,
                     opacity: pressed ? 0.9 : 1,
                   },
                 ]}>
                 {isBusy ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={Colors.light.surface} />
                 ) : (
                   <ThemedText
                     style={[
                       styles.sendButtonText,
-                      { color: colorScheme === 'dark' ? '#f8fafc' : '#fff' },
+                      { color: Colors.light.surface },
                     ]}>
                     Enviar
                   </ThemedText>
@@ -426,6 +425,7 @@ export default function CatechistScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
   },
   list: {
     flex: 1,
@@ -451,6 +451,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     maxWidth: '85%',
     gap: 4,
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   messageAuthor: {
     fontSize: 14,
@@ -462,21 +463,22 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#cbd5f5',
     paddingHorizontal: 20,
     paddingVertical: 12,
     gap: 12,
-    backgroundColor: 'transparent',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
   },
   textInput: {
     minHeight: 60,
     maxHeight: 140,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth * 2,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
     textAlignVertical: 'top',
   },
   actionsRow: {
@@ -492,8 +494,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   sendButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  decorations: {
+    ...StyleSheet.absoluteFillObject,
   },
 });

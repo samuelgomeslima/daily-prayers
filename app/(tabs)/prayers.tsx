@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { PrayerBeadTracker, type PrayerSequence } from '@/components/prayer-bead-tracker';
 import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { bilingualPrayers } from '@/constants/bilingual-prayers';
@@ -173,7 +173,8 @@ const divineMercySequence: PrayerSequence = {
 };
 
 export default function PrayersScreen() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredPrayers = useMemo(() => {
@@ -191,54 +192,54 @@ export default function PrayersScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#F9F6EF', dark: '#1B1A14' }}
+      headerBackgroundColor={{
+        light: palette.backgroundGradientEnd,
+        dark: palette.backgroundGradientEnd,
+      }}
       headerImage={
-        <IconSymbol
-          size={320}
-          color="#C0A162"
-          name="hands.sparkles.fill"
-          style={styles.headerIcon}
+        <SaintJosephLily
+          size={340}
+          opacity={colorScheme === 'dark' ? 0.45 : 0.3}
+          style={styles.headerIllustration}
         />
-      }>
+      }
+    >
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title" style={[styles.title, { fontFamily: Fonts.rounded }]}>
           Orações e Terços
         </ThemedText>
-        <ThemedText style={styles.lead}>
+        <ThemedText style={styles.lead} lightColor={palette.textMuted} darkColor={palette.textMuted}>
           Reze nas duas línguas tradicionais da Igreja e acompanhe cada conta do rosário com os
           contadores interativos.
         </ThemedText>
       </ThemedView>
 
       <ThemedView
-        style={styles.searchContainer}
-        lightColor="#FFFFFF"
-        darkColor="#111312"
+        style={[styles.searchContainer, { borderColor: palette.border, shadowColor: palette.shadow }]}
+        lightColor={Colors.light.surface}
+        darkColor={Colors.dark.surface}
       >
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Busque por título ou trecho"
-          placeholderTextColor={
-            colorScheme === 'dark' ? '#9BA1A6' : '#687076'
-          }
-          selectionColor={colorScheme === 'dark' ? Colors.dark.tint : Colors.light.tint}
+          placeholderTextColor={palette.textMuted}
+          selectionColor={palette.tint}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
-          style={[
-            styles.searchInput,
-            {
-              color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
-            },
-          ]}
+          style={[styles.searchInput, { color: palette.text }]}
           accessibilityLabel="Buscar orações"
         />
       </ThemedView>
 
       {filteredPrayers.length === 0 ? (
-        <ThemedView style={styles.emptyState}>
-          <ThemedText style={styles.emptyStateText}>
+        <ThemedView
+          style={[styles.emptyState, { borderColor: palette.border }]}
+          lightColor={Colors.light.surface}
+          darkColor={Colors.dark.surface}
+        >
+          <ThemedText style={styles.emptyStateText} lightColor={palette.textMuted} darkColor={palette.textMuted}>
             Nenhuma oração encontrada. Ajuste sua busca e tente novamente.
           </ThemedText>
         </ThemedView>
@@ -246,31 +247,20 @@ export default function PrayersScreen() {
         filteredPrayers.map((prayer) => (
           <ThemedView
             key={prayer.id}
-            style={styles.prayerCard}
-            lightColor="#F2F7F5"
-            darkColor="#0F1D1A"
+            style={[styles.prayerCard, { borderColor: palette.border, shadowColor: palette.shadow }]}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}
           >
-            <ThemedText
-              type="subtitle"
-              style={[styles.prayerTitle, { fontFamily: Fonts.serif }]}
-            >
+            <ThemedText type="subtitle" style={[styles.prayerTitle, { fontFamily: Fonts.serif }]}>
               {prayer.title}
             </ThemedText>
 
-            <ThemedText
-              style={styles.languageLabel}
-              lightColor="#356859"
-              darkColor="#9FE2BF"
-            >
+            <ThemedText style={styles.languageLabel} lightColor={palette.tint} darkColor={palette.accentSecondary}>
               Português
             </ThemedText>
             <ThemedText style={styles.prayerText}>{prayer.portuguese}</ThemedText>
 
-            <ThemedText
-              style={styles.languageLabel}
-              lightColor="#356859"
-              darkColor="#9FE2BF"
-            >
+            <ThemedText style={styles.languageLabel} lightColor={palette.tint} darkColor={palette.accentSecondary}>
               Latim
             </ThemedText>
             <ThemedText style={styles.prayerText}>{prayer.latin}</ThemedText>
@@ -279,26 +269,20 @@ export default function PrayersScreen() {
       )}
 
       <ThemedView style={styles.section}>
-        <ThemedText
-          type="subtitle"
-          style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}
-        >
+        <ThemedText type="subtitle" style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}>
           Contador de Terços
         </ThemedText>
-        <ThemedText style={styles.sectionDescription}>
+        <ThemedText style={styles.sectionDescription} lightColor={palette.textMuted} darkColor={palette.textMuted}>
           Marque cada conta enquanto reza o Santo Rosário ou o Terço da Divina Misericórdia. O
           progresso fica visível em cada seção, facilitando retomar a oração caso se distraia.
         </ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.section}>
-        <ThemedText
-          type="subtitle"
-          style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}
-        >
+        <ThemedText type="subtitle" style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}>
           Mistérios do Santo Terço por dia
         </ThemedText>
-        <ThemedText style={styles.sectionDescription}>
+        <ThemedText style={styles.sectionDescription} lightColor={palette.textMuted} darkColor={palette.textMuted}>
           Selecione o conjunto correspondente ao dia e marque cada mistério à medida que avança nas
           dezenas.
         </ThemedText>
@@ -317,14 +301,13 @@ export default function PrayersScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerIcon: {
+  headerIllustration: {
     position: 'absolute',
-    bottom: -80,
-    right: -20,
-    opacity: 0.2,
+    bottom: -70,
+    right: -30,
   },
   titleContainer: {
-    gap: 12,
+    gap: 16,
     marginBottom: 24,
   },
   title: {
@@ -338,6 +321,11 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     gap: 8,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 4,
   },
   prayerTitle: {
     fontSize: 18,
@@ -356,6 +344,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 2,
   },
   searchInput: {
     fontSize: 16,
@@ -366,6 +359,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   emptyStateText: {
     textAlign: 'center',

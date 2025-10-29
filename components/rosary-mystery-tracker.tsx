@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -19,9 +20,13 @@ type RosaryMysteryTrackerProps = {
 };
 
 export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
   const accentColor = useThemeColor({}, 'tint');
-  const cardBackground = useThemeColor({ light: '#F5EFFA', dark: '#1F1527' }, 'background');
-  const mutedText = useThemeColor({ light: '#6C6C6C', dark: '#9BA1A6' }, 'text');
+  const cardBackground = colorScheme === 'dark' ? palette.surfaceSecondary : palette.surface;
+  const mutedText = palette.textMuted;
+  const pillBackground = colorScheme === 'dark' ? 'rgba(184, 196, 255, 0.18)' : 'rgba(123, 116, 242, 0.12)';
+  const pillBorder = colorScheme === 'dark' ? 'rgba(184, 196, 255, 0.3)' : 'rgba(123, 116, 242, 0.22)';
 
   const defaultSetId = sets[0]?.id;
   const [selectedSetId, setSelectedSetId] = useState(defaultSetId ?? '');
@@ -86,7 +91,11 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
               onPress={() => setSelectedSetId(set.id)}
               style={({ pressed }) => [
                 styles.tabButton,
-                isSelected && [styles.tabButtonActive, { borderColor: accentColor }],
+                {
+                  backgroundColor: pillBackground,
+                  borderColor: isSelected ? accentColor : pillBorder,
+                },
+                isSelected && styles.tabButtonActive,
                 pressed && { opacity: 0.7 },
               ]}
               accessibilityRole="button"
@@ -94,7 +103,7 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
             >
               <ThemedText
                 type="defaultSemiBold"
-                style={[styles.tabButtonLabel, isSelected && { color: accentColor }]}
+                style={[styles.tabButtonLabel, { color: isSelected ? accentColor : palette.text }]}
               >
                 {set.title}
               </ThemedText>
@@ -103,7 +112,11 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
         })}
       </View>
 
-      <ThemedView style={[styles.card, { backgroundColor: cardBackground }] }>
+      <ThemedView
+        style={[styles.card, { backgroundColor: cardBackground, borderColor: palette.border, shadowColor: palette.shadow }]}
+        lightColor={Colors.light.surface}
+        darkColor={Colors.dark.surface}
+      >
         <ThemedText type="subtitle" style={[styles.cardTitle, { fontFamily: Fonts.serif }]}>
           {currentSet.title}
         </ThemedText>
@@ -115,7 +128,11 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
           </ThemedText>
           <Pressable
             onPress={resetSetProgress}
-            style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [
+              styles.resetButton,
+              { borderColor: pillBorder, backgroundColor: pillBackground },
+              pressed && { opacity: 0.7 },
+            ]}
             accessibilityRole="button"
           >
             <ThemedText type="defaultSemiBold" style={[styles.resetLabel, { color: accentColor }]}>
@@ -142,8 +159,10 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
                 <View
                   style={[
                     styles.checkbox,
-                    { borderColor: isChecked ? accentColor : '#00000030' },
-                    isChecked && { backgroundColor: accentColor },
+                    {
+                      borderColor: isChecked ? accentColor : pillBorder,
+                      backgroundColor: isChecked ? accentColor : pillBackground,
+                    },
                   ]}
                 />
                 <ThemedText style={styles.mysteryLabel}>{mystery}</ThemedText>
@@ -169,12 +188,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#00000018',
-    backgroundColor: '#00000008',
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   tabButtonActive: {
-    backgroundColor: '#00000012',
+    opacity: 1,
   },
   tabButtonLabel: {
     fontSize: 13,
@@ -183,6 +200,11 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     gap: 12,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 4,
   },
   cardTitle: {
     fontSize: 18,
@@ -206,6 +228,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   resetLabel: {
     fontSize: 13,
@@ -224,7 +247,6 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 6,
     borderWidth: 2,
-    backgroundColor: 'transparent',
   },
   mysteryLabel: {
     flex: 1,

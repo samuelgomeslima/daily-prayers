@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { LilyBackground } from '@/components/lily-background';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -34,6 +35,7 @@ type ModelOptionButtonProps = {
   disabled: boolean;
   onPress: () => void;
   accentColor: string;
+  palette: (typeof Colors)['light'];
   isDark: boolean;
 };
 
@@ -43,6 +45,7 @@ function ModelOptionButton({
   disabled,
   onPress,
   accentColor,
+  palette,
   isDark,
 }: ModelOptionButtonProps) {
   return (
@@ -51,17 +54,19 @@ function ModelOptionButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.optionButton,
+        { borderColor: selected ? accentColor : palette.border, backgroundColor: palette.surface },
         selected && {
-          borderColor: accentColor,
           backgroundColor: isDark
-            ? 'rgba(56, 189, 248, 0.16)'
-            : 'rgba(10, 126, 164, 0.12)',
+            ? 'rgba(184, 196, 255, 0.2)'
+            : 'rgba(123, 116, 242, 0.12)',
         },
         pressed && !disabled && { opacity: 0.85 },
         disabled && { opacity: 0.6 },
       ]}
     >
-      <ThemedText style={styles.optionLabel}>{label}</ThemedText>
+      <ThemedText style={styles.optionLabel} lightColor={palette.text} darkColor={palette.text}>
+        {label}
+      </ThemedText>
       {selected ? (
         <IconSymbol name="checkmark.circle.fill" size={24} color={accentColor} />
       ) : null}
@@ -182,30 +187,32 @@ export default function SettingsScreen() {
   );
 
   const statusVisual = useMemo(() => {
+    const successColor = '#7DD9C1';
+    const dangerColor = '#F2A6B5';
     switch (availability.status) {
       case 'available':
         return {
           label: 'Disponível',
-          dotColor: '#16A34A',
-          backgroundColor: isDark ? 'rgba(34, 197, 94, 0.24)' : 'rgba(34, 197, 94, 0.12)',
-          borderColor: isDark ? 'rgba(34, 197, 94, 0.32)' : 'rgba(34, 197, 94, 0.32)',
+          dotColor: successColor,
+          backgroundColor: isDark ? 'rgba(125, 217, 193, 0.24)' : 'rgba(125, 217, 193, 0.14)',
+          borderColor: 'rgba(125, 217, 193, 0.32)',
         };
       case 'unavailable':
         return {
           label: 'Indisponível',
-          dotColor: '#DC2626',
-          backgroundColor: isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(248, 113, 113, 0.12)',
-          borderColor: isDark ? 'rgba(248, 113, 113, 0.32)' : 'rgba(248, 113, 113, 0.32)',
+          dotColor: dangerColor,
+          backgroundColor: isDark ? 'rgba(242, 166, 181, 0.28)' : 'rgba(242, 166, 181, 0.16)',
+          borderColor: 'rgba(242, 166, 181, 0.34)',
         };
       default:
         return {
           label: 'Verificando...',
-          dotColor: '#F59E0B',
-          backgroundColor: isDark ? 'rgba(251, 191, 36, 0.24)' : 'rgba(253, 224, 71, 0.12)',
-          borderColor: isDark ? 'rgba(251, 191, 36, 0.32)' : 'rgba(251, 191, 36, 0.32)',
+          dotColor: palette.accentSecondary,
+          backgroundColor: isDark ? 'rgba(143, 183, 255, 0.25)' : 'rgba(141, 210, 255, 0.16)',
+          borderColor: 'rgba(141, 210, 255, 0.3)',
         };
     }
-  }, [availability.status, isDark]);
+  }, [availability.status, isDark, palette.accentSecondary]);
 
   const availabilityMessage = useMemo(() => {
     if (availability.status === 'available') {
@@ -224,6 +231,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
+        <LilyBackground style={styles.decorations} variant="compact" />
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -231,7 +239,7 @@ export default function SettingsScreen() {
           <ThemedText type="title" style={styles.heading}>
             Configurações
           </ThemedText>
-          <ThemedText style={styles.intro}>
+          <ThemedText style={[styles.intro, { color: palette.textMuted }]}>
             Personalize quais modelos de IA serão utilizados nos assistentes do
             aplicativo.
           </ThemedText>
@@ -284,15 +292,11 @@ export default function SettingsScreen() {
                 )}
               </Pressable>
             </View>
-            <ThemedText style={styles.aiStatusMessage} lightColor="#4B5563" darkColor="#D1D5DB">
+            <ThemedText style={styles.aiStatusMessage} lightColor={palette.text} darkColor={palette.text}>
               {availabilityMessage}
             </ThemedText>
             {availability.status === 'unavailable' && availability.kind === 'config' ? (
-              <ThemedText
-                style={styles.aiStatusHint}
-                lightColor="#6B7280"
-                darkColor="#9CA3AF"
-              >
+              <ThemedText style={styles.aiStatusHint} lightColor={palette.textMuted} darkColor={palette.textMuted}>
                 Configure a variável EXPO_PUBLIC_CHAT_BASE_URL na build do aplicativo para
                 habilitar os assistentes.
               </ThemedText>
@@ -300,7 +304,17 @@ export default function SettingsScreen() {
           </View>
 
           {isLoading ? (
-            <View style={styles.loadingBanner}>
+            <View
+              style={[
+                styles.loadingBanner,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(184, 196, 255, 0.18)'
+                    : 'rgba(123, 116, 242, 0.12)',
+                  borderColor: palette.border,
+                },
+              ]}
+            >
               <ActivityIndicator color={palette.tint} size="small" />
               <ThemedText style={styles.loadingText}>
                 Carregando preferências salvas...
@@ -312,7 +326,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Assistente Catequista
             </ThemedText>
-            <ThemedText style={styles.sectionDescription}>
+            <ThemedText style={[styles.sectionDescription, { color: palette.textMuted }]}>
               Define qual modelo responde às suas perguntas com base nas obras
               católicas disponíveis.
             </ThemedText>
@@ -324,6 +338,7 @@ export default function SettingsScreen() {
                 onPress={() => setCatechistModel(item.value)}
                 disabled={isLoading}
                 accentColor={palette.tint}
+                palette={palette}
                 isDark={isDark}
               />
             ))}
@@ -333,7 +348,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               IA Católica
             </ThemedText>
-            <ThemedText style={styles.sectionDescription}>
+            <ThemedText style={[styles.sectionDescription, { color: palette.textMuted }]}>
               Escolhe o modelo usado na experiência de chat espiritual e de
               orientação pastoral.
             </ThemedText>
@@ -345,6 +360,7 @@ export default function SettingsScreen() {
                 onPress={() => setChatModel(item.value)}
                 disabled={isLoading}
                 accentColor={palette.tint}
+                palette={palette}
                 isDark={isDark}
               />
             ))}
@@ -361,6 +377,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    position: 'relative',
   },
   content: {
     padding: 24,
@@ -373,13 +390,12 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#6B7280',
   },
   aiStatusCard: {
     borderRadius: 16,
     padding: 16,
     gap: 12,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   aiStatusHeader: {
     flexDirection: 'row',
@@ -420,7 +436,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   aiStatusActionLabel: {
     fontSize: 14,
@@ -438,7 +454,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(107, 114, 128, 0.12)',
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   loadingText: {
     fontSize: 14,
@@ -452,11 +468,9 @@ const styles = StyleSheet.create({
   sectionDescription: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#6B7280',
   },
   optionButton: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: StyleSheet.hairlineWidth * 2,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -468,5 +482,8 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     flex: 1,
+  },
+  decorations: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
