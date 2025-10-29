@@ -49,31 +49,31 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="more"
+        options={{
+          title: 'Mais',
+          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Mais" />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="circle.grid.3x3.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="chat"
         options={{
-          title: 'IA Católica',
-          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="IA Católica" />,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="bubble.left.and.bubble.right.fill" color={color} />
-          ),
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="notes"
         options={{
-          title: 'Anotações',
-          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Anotações" />,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="square.and.pencil" color={color} />,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Configurações',
-          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Configurações" />,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="gearshape.fill" color={color} />
-          ),
+          tabBarButton: () => null,
         }}
       />
     </Tabs>
