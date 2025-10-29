@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,9 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
-import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -136,127 +133,6 @@ const createApiEndpoint = (path: string) => {
 };
 
 const CATECHIST_ENDPOINT = createApiEndpoint('/api/catechist-agent');
-const CATECHIST_TRANSCRIBE_ENDPOINT = createApiEndpoint('/api/catechist-transcribe');
-const TRANSCRIBE_MODEL =
-  process.env.EXPO_PUBLIC_TRANSCRIBE_MODEL ?? 'gpt-4o-mini-transcribe';
-
-const guessMimeTypeFromUri = (uri: string) => {
-  if (typeof uri !== 'string') {
-    return 'audio/mp4';
-  }
-
-  const lower = uri.toLowerCase();
-
-  if (lower.endsWith('.wav')) {
-    return 'audio/wav';
-  }
-
-  if (lower.endsWith('.mp3') || lower.endsWith('.mpeg')) {
-    return 'audio/mpeg';
-  }
-
-  if (lower.endsWith('.3gp') || lower.endsWith('.3gpp')) {
-    return 'audio/3gpp';
-  }
-
-  if (lower.endsWith('.aac')) {
-    return 'audio/aac';
-  }
-
-  if (lower.endsWith('.ogg')) {
-    return 'audio/ogg';
-  }
-
-  return 'audio/mp4';
-};
-
-const guessExtensionFromMimeType = (mimeType: string) => {
-  if (typeof mimeType !== 'string') {
-    return 'm4a';
-  }
-
-  const normalized = mimeType.toLowerCase();
-
-  if (normalized.includes('wav')) {
-    return 'wav';
-  }
-
-  if (normalized.includes('mpeg')) {
-    return 'mp3';
-  }
-
-  if (normalized.includes('3gpp')) {
-    return '3gp';
-  }
-
-  if (normalized.includes('aac')) {
-    return 'aac';
-  }
-
-  if (normalized.includes('ogg')) {
-    return 'ogg';
-  }
-
-  return 'm4a';
-};
-
-const MIN_RECORDING_DURATION_MS = 1000;
-const RECORDING_STOP_DELAY_MS = 200;
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const createRecordingFormData = async (uri: string) => {
-  const info = await FileSystem.getInfoAsync(uri);
-
-  if (!info.exists) {
-    throw new Error('O arquivo de áudio gravado não foi encontrado.');
-  }
-
-  const mimeType = guessMimeTypeFromUri(uri);
-  const extension = guessExtensionFromMimeType(mimeType);
-  const fileName = `recording.${extension}`;
-  const formData = new FormData();
-
-  if (Platform.OS === 'web') {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const webFile = typeof File !== 'undefined' ? new File([blob], fileName, { type: mimeType }) : blob;
-    formData.append('file', webFile);
-  } else {
-    formData.append('file', {
-      uri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
-  }
-
-  formData.append('model', TRANSCRIBE_MODEL);
-
-  return formData;
-};
-
-const toFriendlyTranscriptionError = (error: unknown) => {
-  const defaultMessage =
-    'Ocorreu um problema técnico ao processar o áudio. Tente gravar novamente em instantes.';
-
-  if (!(error instanceof Error) || !error.message) {
-    return defaultMessage;
-  }
-
-  if (/encodingtype/i.test(error.message)) {
-    return 'Não consegui preparar o áudio gravado para envio. Abra o aplicativo novamente e tente gravar mais uma vez.';
-  }
-
-  if (/multipart|form-data/i.test(error.message)) {
-    return 'Não consegui enviar o áudio para transcrição. Verifique sua conexão e tente novamente.';
-  }
-
-  if (/request body is missing/i.test(error.message)) {
-    return 'Não encontrei o áudio gravado. Grave novamente e tente de novo.';
-  }
-
-  return defaultMessage;
-};
 
 const extractAssistantText = (payload: CatechistResponse) => {
   if (!payload) {
@@ -315,58 +191,10 @@ export default function CatechistScreen() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isRecordingStarting, setIsRecordingStarting] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [hasAudioPermission, setHasAudioPermission] = useState<boolean | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const palette = Colors[colorScheme];
   const { catechistModel } = useModelSettings();
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const requestInitialPermission = async () => {
-      try {
-        const result = await Audio.requestPermissionsAsync();
-        if (isMounted) {
-          setHasAudioPermission(result.status === 'granted');
-        }
-      } catch {
-        if (isMounted) {
-          setHasAudioPermission(false);
-        }
-      }
-    };
-
-    requestInitialPermission();
-
-    return () => {
-      isMounted = false;
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => null);
-        recordingRef.current = null;
-      }
-    };
-  }, []);
-
-  const ensureMicrophonePermission = useCallback(async () => {
-    if (hasAudioPermission === true) {
-      return true;
-    }
-
-    try {
-      const result = await Audio.requestPermissionsAsync();
-      const granted = result.status === 'granted';
-      setHasAudioPermission(granted);
-      return granted;
-    } catch {
-      setHasAudioPermission(false);
-      return false;
-    }
-  }, [hasAudioPermission]);
 
   const sendMessageFromText = useCallback(
     async (rawText: string) => {
@@ -479,213 +307,7 @@ export default function CatechistScreen() {
     await sendMessageFromText(trimmed);
   }, [input, sendMessageFromText]);
 
-  const transcribeRecording = useCallback(
-    async (uri: string) => {
-      const endpoint = CATECHIST_TRANSCRIBE_ENDPOINT;
-
-      if (!endpoint) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assistant-transcribe-missing-endpoint`,
-            role: 'assistant',
-            content:
-              'Não foi possível enviar o áudio no momento. Verifique as configurações do endpoint de transcrição antes de tentar novamente.',
-          },
-        ]);
-        return false;
-      }
-
-      try {
-        setIsTranscribing(true);
-
-        const formData = await createRecordingFormData(uri);
-
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorPayload = await response.json().catch(() => null);
-          const message =
-            errorPayload?.error?.message ??
-            'Não foi possível transcrever o áudio no momento. Tente novamente em instantes.';
-          throw new Error(message);
-        }
-
-        const data = await response.json();
-        const transcribedText =
-          typeof data?.text === 'string' && data.text.trim().length > 0 ? data.text.trim() : null;
-
-        if (!transcribedText) {
-          throw new Error('A transcrição do áudio voltou vazia. Grave novamente e tente de novo.');
-        }
-
-        await sendMessageFromText(transcribedText);
-        return true;
-      } catch (error) {
-        console.error('Failed to transcribe catechist recording.', error);
-
-        const friendlyMessage = toFriendlyTranscriptionError(error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assistant-transcribe-error`,
-            role: 'assistant',
-            content:
-              'Não consegui entender o áudio enviado. Tente gravar novamente em um local mais silencioso.',
-          },
-          {
-            id: `${Date.now()}-assistant-transcribe-error-detail`,
-            role: 'assistant',
-            content: friendlyMessage,
-          },
-        ]);
-        return false;
-      } finally {
-        setIsTranscribing(false);
-      }
-    },
-    [sendMessageFromText]
-  );
-
-  const startRecording = useCallback(async () => {
-    if (isRecordingStarting || isRecording || isSending || isTranscribing) {
-      return;
-    }
-
-    try {
-      setIsRecordingStarting(true);
-
-      const granted = await ensureMicrophonePermission();
-
-      if (!granted) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assistant-audio-permission`,
-            role: 'assistant',
-            content:
-              'O microfone está desativado para o app. Ative a permissão para usar a transcrição por voz.',
-          },
-        ]);
-        return;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      recordingRef.current = recording;
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Failed to start catechist audio recording.', error);
-      recordingRef.current = null;
-      setIsRecording(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-assistant-audio-error`,
-          role: 'assistant',
-          content:
-            'Não consegui iniciar a gravação de áudio. Verifique as permissões do microfone e tente novamente.',
-        },
-      ]);
-    } finally {
-      setIsRecordingStarting(false);
-    }
-  }, [ensureMicrophonePermission, isRecording, isRecordingStarting, isSending, isTranscribing]);
-
-  const finishRecording = useCallback(async () => {
-    const recording = recordingRef.current;
-
-    if (!recording) {
-      return;
-    }
-
-    recordingRef.current = null;
-    let recordingUri: string | null = null;
-
-    try {
-      const statusBeforeStop = await recording.getStatusAsync().catch(() => null);
-
-      if (statusBeforeStop?.isRecording && RECORDING_STOP_DELAY_MS > 0) {
-        await wait(RECORDING_STOP_DELAY_MS);
-      }
-
-      await recording.stopAndUnloadAsync();
-
-      const statusAfterStop = await recording.getStatusAsync().catch(() => statusBeforeStop);
-      const durationMillis =
-        typeof statusAfterStop?.durationMillis === 'number' ? statusAfterStop.durationMillis : null;
-      const isShortRecording =
-        typeof durationMillis === 'number' && durationMillis < MIN_RECORDING_DURATION_MS;
-
-      recordingUri = recording.getURI();
-
-      if (!recordingUri) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assistant-audio-missing`,
-            role: 'assistant',
-            content: 'Não foi possível acessar o áudio gravado. Tente gravar novamente.',
-          },
-        ]);
-        return;
-      }
-
-      if (isShortRecording) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assistant-audio-too-short`,
-            role: 'assistant',
-            content: 'O áudio é muito curto. Grave por pelo menos um segundo.',
-          },
-        ]);
-        return;
-      }
-
-      await transcribeRecording(recordingUri);
-    } catch (error) {
-      console.error('Failed to stop catechist audio recording.', error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-assistant-audio-stop-error`,
-          role: 'assistant',
-          content: 'Não consegui finalizar a gravação de áudio. Tente novamente.',
-        },
-      ]);
-    } finally {
-      setIsRecording(false);
-
-      const uriToDelete = recordingUri ?? recording.getURI();
-      if (uriToDelete) {
-        FileSystem.deleteAsync(uriToDelete).catch(() => null);
-      }
-    }
-  }, [transcribeRecording]);
-
-  const handleAudioPress = useCallback(async () => {
-    if (isRecording) {
-      await finishRecording();
-    } else {
-      await startRecording();
-    }
-  }, [finishRecording, isRecording, startRecording]);
-
-  const isBusy = isSending || isTranscribing || isRecordingStarting;
+  const isBusy = isSending;
   const trimmedInput = input.trim();
 
   const renderMessage = useCallback(
@@ -761,43 +383,13 @@ export default function CatechistScreen() {
                 },
               ]}
               multiline
-              editable={!isBusy && !isRecording}
+              editable={!isBusy}
             />
             <View style={styles.actionsRow}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={
-                  isRecording ? 'Parar gravação de áudio' : 'Começar gravação de áudio'
-                }
-                onPress={handleAudioPress}
-                disabled={isTranscribing}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  {
-                    backgroundColor: isRecording
-                      ? '#ef4444'
-                      : colorScheme === 'dark'
-                        ? '#1f2937'
-                        : '#e0e7ff',
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}>
-                {isTranscribing ? (
-                  <ActivityIndicator
-                    color={isRecording ? '#fff' : colorScheme === 'dark' ? '#f8fafc' : palette.tint}
-                  />
-                ) : (
-                  <Ionicons
-                    name={isRecording ? 'stop-circle' : 'mic'}
-                    size={26}
-                    color={isRecording ? '#fff' : colorScheme === 'dark' ? '#f8fafc' : palette.tint}
-                  />
-                )}
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
                 onPress={sendMessage}
-                disabled={isBusy || isRecording || trimmedInput.length === 0}
+                disabled={isBusy || trimmedInput.length === 0}
                 style={({ pressed }) => [
                   styles.sendButton,
                   {
@@ -891,13 +483,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  actionButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   sendButton: {
     flex: 1,
