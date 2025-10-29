@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { SaintJosephLily } from '@/components/saint-joseph-lily';
@@ -8,7 +8,7 @@ import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { bilingualPrayers } from '@/constants/bilingual-prayers';
+import { bilingualPrayers, type BilingualPrayer } from '@/constants/bilingual-prayers';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -177,6 +177,7 @@ export default function PrayersScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPrayer, setSelectedPrayer] = useState<BilingualPrayer | null>(null);
 
   const filteredPrayers = useMemo(() => {
     const normalizedQuery = normalizeText(searchQuery.trim());
@@ -270,30 +271,52 @@ export default function PrayersScreen() {
             lightColor={Colors.light.surface}
             darkColor={Colors.dark.surface}
           >
+            <View style={styles.prayerHeader}>
+              <ThemedText
+                type="subtitle"
+                style={[styles.prayerTitle, { fontFamily: Fonts.serif }]}
+              >
+                {prayer.title}
+              </ThemedText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Ver a oração ${prayer.title}`}
+                onPress={() => setSelectedPrayer(prayer)}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <IconSymbol
+                  name="info.circle.fill"
+                  size={24}
+                  color={palette.tint}
+                />
+              </Pressable>
+            </View>
             <ThemedText
-              type="subtitle"
-              style={[styles.prayerTitle, { fontFamily: Fonts.serif }]}
+              style={styles.prayerHint}
+              lightColor={`${Colors.light.text}99`}
+              darkColor={`${Colors.dark.text}99`}
             >
-              {prayer.title}
+              Toque no ícone para ler em português e em latim.
             </ThemedText>
-
-            <ThemedText
-              style={styles.languageLabel}
-              lightColor={`${Colors.light.tint}33`}
-              darkColor={`${Colors.dark.tint}33`}
-            >
-              Português
-            </ThemedText>
-            <ThemedText style={styles.prayerText}>{prayer.portuguese}</ThemedText>
-
-            <ThemedText
-              style={styles.languageLabel}
-              lightColor={`${Colors.light.tint}33`}
-              darkColor={`${Colors.dark.tint}33`}
-            >
-              Latim
-            </ThemedText>
-            <ThemedText style={styles.prayerText}>{prayer.latin}</ThemedText>
+            <View style={styles.languageTags}>
+              <ThemedView
+                style={styles.languageChip}
+                lightColor={`${Colors.light.tint}1A`}
+                darkColor={`${Colors.dark.tint}1A`}
+              >
+                <ThemedText style={styles.languageChipText}>Português</ThemedText>
+              </ThemedView>
+              <ThemedView
+                style={styles.languageChip}
+                lightColor={`${Colors.light.tint}1A`}
+                darkColor={`${Colors.dark.tint}1A`}
+              >
+                <ThemedText style={styles.languageChipText}>Latim</ThemedText>
+              </ThemedView>
+            </View>
           </ThemedView>
         ))
       )}
@@ -332,6 +355,67 @@ export default function PrayersScreen() {
       <ThemedView style={styles.trackerWrapper}>
         <PrayerBeadTracker sequence={divineMercySequence} />
       </ThemedView>
+
+      <Modal
+        animationType="slide"
+        visible={selectedPrayer !== null}
+        transparent
+        onRequestClose={() => setSelectedPrayer(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <ThemedView
+            style={styles.modalContainer}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}
+          >
+            <View style={styles.modalHeader}>
+              <ThemedText
+                type="subtitle"
+                style={[styles.modalTitle, { fontFamily: Fonts.serif }]}
+              >
+                {selectedPrayer?.title}
+              </ThemedText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Fechar oração"
+                onPress={() => setSelectedPrayer(null)}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <IconSymbol
+                  name="xmark.circle.fill"
+                  size={24}
+                  color={palette.tint}
+                />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              <ThemedText
+                style={styles.languageLabel}
+                lightColor={`${Colors.light.tint}33`}
+                darkColor={`${Colors.dark.tint}33`}
+              >
+                Português
+              </ThemedText>
+              <ThemedText style={styles.prayerText}>
+                {selectedPrayer?.portuguese}
+              </ThemedText>
+              <ThemedText
+                style={styles.languageLabel}
+                lightColor={`${Colors.light.tint}33`}
+                darkColor={`${Colors.dark.tint}33`}
+              >
+                Latim
+              </ThemedText>
+              <ThemedText style={styles.prayerText}>
+                {selectedPrayer?.latin}
+              </ThemedText>
+            </ScrollView>
+          </ThemedView>
+        </View>
+      </Modal>
     </ParallaxScrollView>
   );
 }
@@ -378,31 +462,57 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   prayerCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
     marginTop: 24,
-    padding: 18,
-    borderRadius: 16,
-    gap: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 24,
+    shadowOpacity: 0.08,
+    gap: 12,
+  },
+  prayerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   prayerTitle: {
     fontSize: 18,
+    flex: 1,
+  },
+  prayerHint: {
+    fontSize: 14,
+  },
+  languageTags: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  languageChip: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  languageChipText: {
+    fontSize: 13,
+    fontFamily: Fonts.rounded,
   },
   languageLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    letterSpacing: 0.6,
   },
   prayerText: {
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 20,
+    fontFamily: Fonts.serif,
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 999,
   },
   searchContainer: {
     borderRadius: 16,
@@ -436,5 +546,37 @@ const styles = StyleSheet.create({
   },
   trackerWrapper: {
     marginTop: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContainer: {
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 32,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    flex: 1,
+  },
+  modalContent: {
+    paddingBottom: 8,
   },
 });
