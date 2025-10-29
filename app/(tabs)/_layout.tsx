@@ -29,18 +29,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="rosary"
-        options={{
-          title: 'Terços',
-          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Terços" />,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="circle.grid.3x3.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="prayers"
         options={{
-          title: 'Orações',
-          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Orações" />,
+          title: 'Orações e Terços',
+          tabBarLabel: ({ color }) => (
+            <TabBarLabel color={color} title="Orações e Terços" />
+          ),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="hands.sparkles.fill" color={color} />,
         }}
       />
