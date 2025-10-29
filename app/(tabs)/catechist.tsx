@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type ChatMessage = {
@@ -322,6 +323,7 @@ export default function CatechistScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const palette = Colors[colorScheme];
+  const { catechistModel } = useModelSettings();
 
   useEffect(() => {
     let isMounted = true;
@@ -407,6 +409,7 @@ export default function CatechistScreen() {
           body: JSON.stringify({
             input_as_text: trimmed,
             conversationId: conversationId ?? undefined,
+            model: catechistModel,
           }),
         });
 
@@ -462,7 +465,7 @@ export default function CatechistScreen() {
         setIsSending(false);
       }
     },
-    [conversationId]
+    [catechistModel, conversationId]
   );
 
   const sendMessage = useCallback(async () => {

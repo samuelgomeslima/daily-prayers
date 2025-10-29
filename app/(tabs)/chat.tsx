@@ -15,6 +15,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type ChatMessage = {
@@ -107,6 +108,7 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const palette = Colors[colorScheme];
+  const { chatModel } = useModelSettings();
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
@@ -155,6 +157,7 @@ export default function ChatScreen() {
         body: JSON.stringify({
           messages: payloadMessages,
           temperature: 0.6,
+          model: chatModel,
         }),
       });
 
@@ -204,7 +207,7 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [input, messages]);
+  }, [chatModel, input, messages]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
