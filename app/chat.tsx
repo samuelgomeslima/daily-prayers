@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
@@ -216,6 +217,8 @@ export default function ChatScreen() {
             />
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Enviar mensagem"
+              accessibilityHint="Toque duas vezes para enviar sua mensagem."
               onPress={sendMessage}
               disabled={isSending}
               style={({ pressed }) => [
@@ -228,9 +231,7 @@ export default function ChatScreen() {
               {isSending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText style={styles.sendButtonText}>
-                  Enviar
-                </ThemedText>
+                <MaterialIcons name="arrow-forward" size={24} color="#fff" />
               )}
             </Pressable>
           </View>
@@ -290,8 +291,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   textInput: {
+    flex: 1,
     minHeight: 60,
     maxHeight: 140,
     borderWidth: 1,
@@ -304,16 +308,12 @@ const styles = StyleSheet.create({
   sendButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: 999,
+    width: 52,
+    height: 52,
     shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   lilyTop: {
     position: 'absolute',

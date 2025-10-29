@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
@@ -379,27 +380,25 @@ export default function CatechistScreen() {
               multiline
               editable={!isBusy}
             />
-            <View style={styles.actionsRow}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={sendMessage}
-                disabled={isBusy || trimmedInput.length === 0}
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  {
-                    backgroundColor: isBusy ? `${palette.tint}66` : palette.tint,
-                    opacity: pressed ? 0.9 : 1,
-                  },
-                ]}>
-                {isBusy ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <ThemedText style={styles.sendButtonText}>
-                    Enviar
-                  </ThemedText>
-                )}
-              </Pressable>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Enviar mensagem"
+              accessibilityHint="Toque duas vezes para enviar sua mensagem."
+              onPress={sendMessage}
+              disabled={isBusy || trimmedInput.length === 0}
+              style={({ pressed }) => [
+                styles.sendButton,
+                {
+                  backgroundColor: isBusy ? `${palette.tint}66` : palette.tint,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}>
+              {isBusy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <MaterialIcons name="arrow-forward" size={24} color="#fff" />
+              )}
+            </Pressable>
           </View>
         </ThemedView>
       </KeyboardAvoidingView>
@@ -457,8 +456,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   textInput: {
+    flex: 1,
     minHeight: 60,
     maxHeight: 140,
     borderWidth: 1,
@@ -468,25 +470,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlignVertical: 'top',
   },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
   sendButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: 999,
+    width: 52,
+    height: 52,
     shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   lilyTop: {
     position: 'absolute',
