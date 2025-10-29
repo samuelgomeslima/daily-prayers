@@ -4,13 +4,23 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
-1. Install dependencies
+1. Use Node.js 20
+
+   The Expo SDK 54 toolchain bundled with this project requires Node.js **20.19.4 or newer**. If you use [`nvm`](https://github.com/nvm-sh/nvm), you can switch to the correct version with:
+
+   ```bash
+   nvm use
+   ```
+
+   The repository includes an [`.nvmrc`](.nvmrc) file to simplify selecting the right runtime. If you do not use `nvm`, install Node.js 20.19.4 manually before proceeding.
+
+2. Install dependencies
 
    ```bash
    npm install
    ```
 
-2. Configure the chat proxy endpoint
+3. Configure the chat proxy endpoint
 
    Copy the example environment file and update `EXPO_PUBLIC_CHAT_BASE_URL` with the full URL of your deployed Static Web App (e.g. `https://white-ground-0a882961e.1.azurestaticapps.net/`).
 
@@ -21,7 +31,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    > [!TIP] > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
 
-3. Start the app
+4. Start the app
 
    ```bash
    npx expo start
