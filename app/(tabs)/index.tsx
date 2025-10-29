@@ -1,29 +1,47 @@
-import { Image } from 'expo-image';
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const CARD_COLORS = {
-  light: '#F2F6FB',
-  dark: '#1C252F',
+  light: Colors.light.surface,
+  dark: Colors.dark.surface,
 };
 
 export default function HomeScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#E2ECF6', dark: '#0F1924' }}
+      headerBackgroundColor={{
+        light: Colors.light.heroBackground,
+        dark: Colors.dark.heroBackground,
+      }}
       headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.headerImage}
-        />
+        <View style={styles.headerImage}>
+          <View
+            style={[styles.headerOrb, { backgroundColor: palette.heroAccent }]}
+          />
+          <View
+            style={[
+              styles.headerHalo,
+              {
+                borderColor: palette.overlay,
+              },
+            ]}
+          />
+          <SaintJosephLily size={220} opacity={0.75} style={styles.headerLily} />
+        </View>
       }>
       <ThemedView style={styles.titleContainer}>
+        <SaintJosephLily size={110} opacity={0.22} style={styles.titleLily} />
         <ThemedText type="title" style={styles.title}>
           Conteúdo litúrgico oficial
         </ThemedText>
@@ -140,8 +158,15 @@ type FeatureCardProps = {
 };
 
 function FeatureCard({ title, children }: FeatureCardProps) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
+
   return (
-    <ThemedView style={styles.card} lightColor={CARD_COLORS.light} darkColor={CARD_COLORS.dark}>
+    <ThemedView
+      style={[styles.card, { borderColor: `${palette.border}80`, shadowColor: `${palette.tint}26` }]}
+      lightColor={CARD_COLORS.light}
+      darkColor={CARD_COLORS.dark}
+    >
       <ThemedText type="subtitle" style={styles.cardTitle}>
         {title}
       </ThemedText>
@@ -152,16 +177,40 @@ function FeatureCard({ title, children }: FeatureCardProps) {
 
 const styles = StyleSheet.create({
   headerImage: {
-    height: 200,
-    width: 320,
-    bottom: -40,
-    left: -20,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerOrb: {
     position: 'absolute',
-    opacity: 0.4,
+    width: 220,
+    height: 220,
+    borderRadius: 200,
+    opacity: 0.45,
+    transform: [{ translateY: 24 }],
+  },
+  headerHalo: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 260,
+    borderWidth: 3,
+    opacity: 0.6,
+  },
+  headerLily: {
+    transform: [{ translateY: 32 }],
   },
   titleContainer: {
     gap: 12,
     marginBottom: 24,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  titleLily: {
+    position: 'absolute',
+    right: -20,
+    top: -30,
   },
   title: {
     fontFamily: Fonts.rounded,
@@ -174,6 +223,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     gap: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   cardTitle: {
     fontFamily: Fonts.serif,

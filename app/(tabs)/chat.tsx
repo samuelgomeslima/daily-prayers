@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -149,22 +150,13 @@ export default function ChatScreen() {
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
       const isUser = item.role === 'user';
-      const backgroundColor = isUser
-        ? colorScheme === 'dark'
-          ? '#2563eb'
-          : palette.tint
-        : colorScheme === 'dark'
-          ? '#1f2937'
-          : '#f1f5f9';
-      const textColor = isUser
-        ? '#fff'
-        : colorScheme === 'dark'
-          ? '#e2e8f0'
-          : palette.text;
+      const backgroundColor = isUser ? palette.tint : palette.surface;
+      const textColor = isUser ? '#fff' : palette.text;
+      const bubbleBorder = isUser ? `${palette.tint}70` : `${palette.border}99`;
 
       return (
         <View style={[styles.messageWrapper, isUser ? styles.messageRight : styles.messageLeft]}>
-          <View style={[styles.messageBubble, { backgroundColor }]}> 
+          <View style={[styles.messageBubble, { backgroundColor, borderColor: bubbleBorder }] }>
             <ThemedText style={[styles.messageAuthor, { color: textColor }]} type="defaultSemiBold">
               {isUser ? 'Você' : 'Companheiro de Fé'}
             </ThemedText>
@@ -178,7 +170,7 @@ export default function ChatScreen() {
     [colorScheme, palette]
   );
 
-  const screenBackground = colorScheme === 'dark' ? '#0f172a' : palette.background;
+  const screenBackground = palette.background;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: screenBackground }}>
@@ -187,6 +179,8 @@ export default function ChatScreen() {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
         <ThemedView style={[styles.container, { backgroundColor: screenBackground }]}>
+          <SaintJosephLily size={220} opacity={0.12} style={styles.lilyTop} pointerEvents="none" />
+          <SaintJosephLily size={180} opacity={0.1} style={styles.lilyBottom} pointerEvents="none" />
           <FlatList
             ref={listRef}
             data={messages}
@@ -201,21 +195,21 @@ export default function ChatScreen() {
             style={[
               styles.inputContainer,
               {
-                borderTopColor: colorScheme === 'dark' ? '#1f2937' : '#cbd5f5',
-                backgroundColor: colorScheme === 'dark' ? '#0f172a' : palette.background,
+                borderTopColor: `${palette.border}80`,
+                backgroundColor: palette.background,
               },
             ]}>
             <TextInput
               value={input}
               onChangeText={setInput}
               placeholder="Escreva sua pergunta ou pedido de oração..."
-              placeholderTextColor={colorScheme === 'dark' ? '#64748b' : '#94a3b8'}
+              placeholderTextColor={colorScheme === 'dark' ? '#8C96D1' : '#7D84B8'}
               style={[
                 styles.textInput,
                 {
-                  borderColor: colorScheme === 'dark' ? '#1f2937' : '#cbd5f5',
-                  backgroundColor: colorScheme === 'dark' ? '#111827' : '#fff',
-                  color: colorScheme === 'dark' ? '#f8fafc' : palette.text,
+                  borderColor: `${palette.border}A6`,
+                  backgroundColor: palette.surface,
+                  color: palette.text,
                 },
               ]}
               multiline
@@ -227,24 +221,14 @@ export default function ChatScreen() {
               style={({ pressed }) => [
                 styles.sendButton,
                 {
-                  backgroundColor: isSending
-                    ? colorScheme === 'dark'
-                      ? '#1d4ed8'
-                      : '#94a3b8'
-                    : colorScheme === 'dark'
-                      ? '#2563eb'
-                      : palette.tint,
+                  backgroundColor: isSending ? `${palette.tint}66` : palette.tint,
                   opacity: pressed ? 0.9 : 1,
                 },
               ]}>
               {isSending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText
-                  style={[
-                    styles.sendButtonText,
-                    { color: colorScheme === 'dark' ? '#f8fafc' : '#fff' },
-                  ]}>
+                <ThemedText style={styles.sendButtonText}>
                   Enviar
                 </ThemedText>
               )}
@@ -259,6 +243,8 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
   },
   list: {
     flex: 1,
@@ -267,6 +253,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingBottom: 24,
+    paddingTop: 12,
   },
   messageWrapper: {
     flexDirection: 'row',
@@ -284,6 +271,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     maxWidth: '85%',
     gap: 4,
+    borderWidth: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
   },
   messageAuthor: {
     fontSize: 14,
@@ -295,7 +286,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#cbd5f5',
     paddingHorizontal: 20,
     paddingVertical: 12,
     gap: 12,
@@ -309,7 +299,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
     textAlignVertical: 'top',
   },
   sendButton: {
@@ -317,10 +306,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 16,
     paddingVertical: 14,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   sendButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  lilyTop: {
+    position: 'absolute',
+    top: -60,
+    right: -40,
+  },
+  lilyBottom: {
+    position: 'absolute',
+    bottom: -80,
+    left: -20,
+    transform: [{ scaleX: -1 }],
   },
 });

@@ -10,15 +10,24 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
   const tabBarStyle = Platform.OS === 'web' ? styles.webTabBar : undefined;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: palette.tabIconSelected,
+        tabBarInactiveTintColor: palette.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarStyle,
+        tabBarStyle: [
+          styles.tabBar,
+          tabBarStyle,
+          {
+            backgroundColor: palette.surface,
+            borderTopColor: palette.border,
+          },
+        ],
       }}>
       <Tabs.Screen
         name="index"
@@ -99,6 +108,12 @@ function TabBarLabel({ color, title }: TabBarLabelProps) {
 }
 
 const styles = StyleSheet.create({
+  tabBar: {
+    paddingTop: 10,
+    paddingBottom: 16,
+    height: 82,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   tabLabel: {
     fontSize: 12,
     lineHeight: 16,

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { PrayerBeadTracker, type PrayerSequence } from '@/components/prayer-bead-tracker';
 import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -174,6 +175,7 @@ const divineMercySequence: PrayerSequence = {
 
 export default function PrayersScreen() {
   const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredPrayers = useMemo(() => {
@@ -191,16 +193,24 @@ export default function PrayersScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#F9F6EF', dark: '#1B1A14' }}
+      headerBackgroundColor={{
+        light: Colors.light.heroAccent,
+        dark: Colors.dark.heroAccent,
+      }}
       headerImage={
-        <IconSymbol
-          size={320}
-          color="#C0A162"
-          name="hands.sparkles.fill"
-          style={styles.headerIcon}
-        />
+        <View style={styles.headerImage}>
+          <View style={[styles.headerGlow, { backgroundColor: `${palette.tint}1A` }]} />
+          <SaintJosephLily size={220} opacity={0.8} style={styles.headerLily} />
+          <IconSymbol
+            size={72}
+            color={palette.tint}
+            name="hands.sparkles.fill"
+            style={styles.headerIcon}
+          />
+        </View>
       }>
       <ThemedView style={styles.titleContainer}>
+        <SaintJosephLily size={96} opacity={0.18} style={styles.titleLily} />
         <ThemedText type="title" style={[styles.title, { fontFamily: Fonts.rounded }]}>
           Orações e Terços
         </ThemedText>
@@ -212,15 +222,15 @@ export default function PrayersScreen() {
 
       <ThemedView
         style={styles.searchContainer}
-        lightColor="#FFFFFF"
-        darkColor="#111312"
+        lightColor={Colors.light.surface}
+        darkColor={Colors.dark.surface}
       >
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Busque por título ou trecho"
           placeholderTextColor={
-            colorScheme === 'dark' ? '#9BA1A6' : '#687076'
+            colorScheme === 'dark' ? '#7C88C7' : '#7B82B6'
           }
           selectionColor={colorScheme === 'dark' ? Colors.dark.tint : Colors.light.tint}
           autoCapitalize="none"
@@ -229,7 +239,7 @@ export default function PrayersScreen() {
           style={[
             styles.searchInput,
             {
-              color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
+              color: palette.text,
             },
           ]}
           accessibilityLabel="Buscar orações"
@@ -237,7 +247,11 @@ export default function PrayersScreen() {
       </ThemedView>
 
       {filteredPrayers.length === 0 ? (
-        <ThemedView style={styles.emptyState}>
+        <ThemedView
+          style={styles.emptyState}
+          lightColor={Colors.light.surface}
+          darkColor={Colors.dark.surface}
+        >
           <ThemedText style={styles.emptyStateText}>
             Nenhuma oração encontrada. Ajuste sua busca e tente novamente.
           </ThemedText>
@@ -246,9 +260,15 @@ export default function PrayersScreen() {
         filteredPrayers.map((prayer) => (
           <ThemedView
             key={prayer.id}
-            style={styles.prayerCard}
-            lightColor="#F2F7F5"
-            darkColor="#0F1D1A"
+            style={[
+              styles.prayerCard,
+              {
+                borderColor: `${palette.border}99`,
+                shadowColor: `${palette.tint}1A`,
+              },
+            ]}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}
           >
             <ThemedText
               type="subtitle"
@@ -259,8 +279,8 @@ export default function PrayersScreen() {
 
             <ThemedText
               style={styles.languageLabel}
-              lightColor="#356859"
-              darkColor="#9FE2BF"
+              lightColor={`${Colors.light.tint}33`}
+              darkColor={`${Colors.dark.tint}33`}
             >
               Português
             </ThemedText>
@@ -268,8 +288,8 @@ export default function PrayersScreen() {
 
             <ThemedText
               style={styles.languageLabel}
-              lightColor="#356859"
-              darkColor="#9FE2BF"
+              lightColor={`${Colors.light.tint}33`}
+              darkColor={`${Colors.dark.tint}33`}
             >
               Latim
             </ThemedText>
@@ -317,15 +337,39 @@ export default function PrayersScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerImage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerGlow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 220,
+    opacity: 0.6,
+    transform: [{ translateY: 32 }],
+  },
+  headerLily: {
+    transform: [{ translateY: 30 }],
+  },
   headerIcon: {
     position: 'absolute',
-    bottom: -80,
-    right: -20,
-    opacity: 0.2,
+    bottom: 32,
+    right: 48,
+    opacity: 0.5,
   },
   titleContainer: {
     gap: 12,
     marginBottom: 24,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  titleLily: {
+    position: 'absolute',
+    right: -20,
+    top: -16,
   },
   title: {
     fontFamily: Fonts.rounded,
@@ -338,6 +382,11 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 3,
   },
   prayerTitle: {
     fontSize: 18,
@@ -347,6 +396,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   prayerText: {
     lineHeight: 22,

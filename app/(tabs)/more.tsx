@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { SaintJosephLily } from '@/components/saint-joseph-lily';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -41,7 +42,9 @@ export default function MoreScreen() {
   const palette = Colors[colorScheme];
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
+      <SaintJosephLily size={160} opacity={0.15} style={styles.lilyTop} />
+      <SaintJosephLily size={140} opacity={0.12} style={styles.lilyBottom} />
       <ThemedText style={styles.heading}>Mais recursos</ThemedText>
       <View style={styles.optionsContainer}>
         {OPTIONS.map((option) => (
@@ -49,10 +52,13 @@ export default function MoreScreen() {
             <Pressable style={({ pressed }) => [
                 styles.option,
                 {
-                  borderColor: palette.icon,
+                  borderColor: `${palette.border}88`,
                   backgroundColor: pressed
-                    ? `${palette.tint}14`
-                    : `${palette.background}`,
+                    ? `${palette.tint}1F`
+                    : colorScheme === 'dark'
+                      ? Colors.dark.surface
+                      : Colors.light.surface,
+                  shadowColor: `${palette.tint}1A`,
                 },
               ]}
             >
@@ -81,6 +87,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 24,
     gap: 16,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  lilyTop: {
+    position: 'absolute',
+    top: -40,
+    right: -30,
+  },
+  lilyBottom: {
+    position: 'absolute',
+    bottom: -50,
+    left: -20,
+    transform: [{ scaleX: -1 }],
   },
   heading: {
     fontSize: 24,
@@ -97,6 +116,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     gap: 16,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 2,
   },
   optionIcon: {
     marginRight: 4,
