@@ -16,26 +16,7 @@ type MoreOption = {
   href: string;
 };
 
-const OPTIONS: MoreOption[] = [
-  {
-    title: 'IA Católica',
-    description: 'Converse com a assistente e receba orientações pastorais.',
-    icon: 'bubble.left.and.bubble.right.fill',
-    href: '/(tabs)/chat',
-  },
-  {
-    title: 'Anotações',
-    description: 'Registre inspirações, intenções e lembretes espirituais.',
-    icon: 'square.and.pencil',
-    href: '/(tabs)/notes',
-  },
-  {
-    title: 'Configurações',
-    description: 'Ajuste preferências de oração, notificações e tema.',
-    icon: 'gearshape.fill',
-    href: '/(tabs)/settings',
-  },
-];
+const OPTIONS: MoreOption[] = [];
 
 export default function MoreScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -47,35 +28,42 @@ export default function MoreScreen() {
       <SaintJosephLily size={140} opacity={0.12} style={styles.lilyBottom} />
       <ThemedText style={styles.heading}>Mais recursos</ThemedText>
       <View style={styles.optionsContainer}>
-        {OPTIONS.map((option) => (
-          <Link key={option.href} href={option.href} asChild>
-            <Pressable style={({ pressed }) => [
-                styles.option,
-                {
-                  borderColor: `${palette.border}88`,
-                  backgroundColor: pressed
-                    ? `${palette.tint}1F`
-                    : colorScheme === 'dark'
-                      ? Colors.dark.surface
-                      : Colors.light.surface,
-                  shadowColor: `${palette.tint}1A`,
-                },
-              ]}
-            >
-              <IconSymbol
-                name={option.icon}
-                size={28}
-                color={palette.tint}
-                style={styles.optionIcon}
-              />
-              <View style={styles.textContainer}>
-                <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
-                <ThemedText style={styles.optionDescription}>{option.description}</ThemedText>
-              </View>
-              <IconSymbol name="chevron.right" size={20} color={palette.icon} />
-            </Pressable>
-          </Link>
-        ))}
+        {OPTIONS.length > 0 ? (
+          OPTIONS.map((option) => (
+            <Link key={option.href} href={option.href} asChild>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.option,
+                  {
+                    borderColor: `${palette.border}88`,
+                    backgroundColor: pressed
+                      ? `${palette.tint}1F`
+                      : colorScheme === 'dark'
+                        ? Colors.dark.surface
+                        : Colors.light.surface,
+                    shadowColor: `${palette.tint}1A`,
+                  },
+                ]}
+              >
+                <IconSymbol
+                  name={option.icon}
+                  size={28}
+                  color={palette.tint}
+                  style={styles.optionIcon}
+                />
+                <View style={styles.textContainer}>
+                  <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
+                  <ThemedText style={styles.optionDescription}>{option.description}</ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={20} color={palette.icon} />
+              </Pressable>
+            </Link>
+          ))
+        ) : (
+          <ThemedText style={styles.emptyState}>
+            Novos recursos chegarão em breve.
+          </ThemedText>
+        )}
       </View>
     </ThemedView>
   );
@@ -107,6 +95,11 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     gap: 12,
+  },
+  emptyState: {
+    textAlign: 'center',
+    fontSize: 16,
+    opacity: 0.7,
   },
   option: {
     flexDirection: 'row',
