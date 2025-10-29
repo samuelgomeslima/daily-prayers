@@ -47,6 +47,18 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
+            name="chat"
+            options={{ title: 'IA Católica' }}
+          />
+          <Stack.Screen
+            name="notes"
+            options={{ title: 'Anotações' }}
+          />
+          <Stack.Screen
+            name="settings"
+            options={{ title: 'Configurações' }}
+          />
+          <Stack.Screen
             name="modal"
             options={{ presentation: 'modal', title: 'Modal' }}
           />

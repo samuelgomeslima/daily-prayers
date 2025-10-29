@@ -21,19 +21,19 @@ const OPTIONS: MoreOption[] = [
     title: 'IA Católica',
     description: 'Converse com a assistente e receba orientações pastorais.',
     icon: 'bubble.left.and.bubble.right.fill',
-    href: '/(tabs)/chat',
+    href: '/chat',
   },
   {
     title: 'Anotações',
     description: 'Registre inspirações, intenções e lembretes espirituais.',
     icon: 'square.and.pencil',
-    href: '/(tabs)/notes',
+    href: '/notes',
   },
   {
     title: 'Configurações',
     description: 'Ajuste preferências de oração, notificações e tema.',
     icon: 'gearshape.fill',
-    href: '/(tabs)/settings',
+    href: '/settings',
   },
 ];
 
