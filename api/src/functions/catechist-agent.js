@@ -23,7 +23,7 @@ const DEFAULT_MODEL = (() => {
     return configured;
   }
 
-  return 'gpt-5-mini';
+  return 'gpt-4o-mini';
 })();
 
 const createCatechistAgent = (model) =>
