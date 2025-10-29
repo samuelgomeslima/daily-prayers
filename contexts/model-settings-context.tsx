@@ -38,7 +38,7 @@ type ModelSettingsContextValue = {
 };
 
 const DEFAULT_SETTINGS: ModelSettingsState = {
-  catechistModel: 'gpt-5-mini',
+  catechistModel: 'gpt-4o-mini',
   chatModel: 'gpt-4o-mini',
 };
 
