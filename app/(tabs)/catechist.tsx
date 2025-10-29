@@ -194,6 +194,7 @@ export default function CatechistScreen() {
   const [isSending, setIsSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const typingMessageIdRef = useRef<string | null>(null);
 
   const palette = Colors[colorScheme];
   const { catechistModel } = useModelSettings();
@@ -227,7 +228,23 @@ export default function CatechistScreen() {
         content: trimmed,
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      const typingId = `${Date.now()}-assistant-typing`;
+      const typingMessage: ChatMessage = {
+        id: typingId,
+        role: 'assistant',
+        content: 'Digitando...',
+      };
+
+      const previousTypingId = typingMessageIdRef.current;
+
+      setMessages((prev) => {
+        const withoutPreviousTyping = previousTypingId
+          ? prev.filter((message) => message.id !== previousTypingId)
+          : prev;
+
+        return [...withoutPreviousTyping, userMessage, typingMessage];
+      });
+      typingMessageIdRef.current = typingId;
       setIsSending(true);
 
       try {
@@ -263,7 +280,14 @@ export default function CatechistScreen() {
           content: assistantText,
         };
 
-        setMessages((prev) => [...prev, assistantMessage]);
+        setMessages((prev) => [
+          ...prev.filter((message) => message.id !== typingId),
+          assistantMessage,
+        ]);
+
+        if (typingMessageIdRef.current === typingId) {
+          typingMessageIdRef.current = null;
+        }
 
         const newConversationId = extractConversationId(data);
         if (newConversationId) {
@@ -277,7 +301,7 @@ export default function CatechistScreen() {
             ? sendError.message
             : 'Ocorreu um erro inesperado ao contatar o Assistente Catequista.';
         setMessages((prev) => [
-          ...prev,
+          ...prev.filter((message) => message.id !== typingId),
           {
             id: `${Date.now()}-assistant-error`,
             role: 'assistant',
@@ -290,6 +314,9 @@ export default function CatechistScreen() {
             content: friendlyMessage,
           },
         ]);
+        if (typingMessageIdRef.current === typingId) {
+          typingMessageIdRef.current = null;
+        }
         return false;
       } finally {
         setIsSending(false);
@@ -325,9 +352,18 @@ export default function CatechistScreen() {
             <ThemedText style={[styles.messageAuthor, { color: textColor }]} type="defaultSemiBold">
               {isUser ? 'Você' : 'Assistente Catequista'}
             </ThemedText>
-            <ThemedText style={[styles.messageContent, { color: textColor }]}>
-              {item.content}
-            </ThemedText>
+            {item.id.endsWith('-assistant-typing') ? (
+              <View style={styles.typingRow}>
+                <ActivityIndicator size="small" color={isUser ? '#fff' : palette.tint} />
+                <ThemedText style={[styles.messageContent, { color: textColor }]}>
+                  {item.content}
+                </ThemedText>
+              </View>
+            ) : (
+              <ThemedText style={[styles.messageContent, { color: textColor }]}>
+                {item.content}
+              </ThemedText>
+            )}
           </View>
         </View>
       );
@@ -393,11 +429,7 @@ export default function CatechistScreen() {
                   opacity: pressed ? 0.9 : 1,
                 },
               ]}>
-              {isBusy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <MaterialIcons name="arrow-forward" size={24} color="#fff" />
-              )}
+              <MaterialIcons name="arrow-forward" size={24} color="#fff" />
             </Pressable>
           </View>
         </ThemedView>
@@ -449,6 +481,11 @@ const styles = StyleSheet.create({
   messageContent: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   inputContainer: {
     borderTopWidth: StyleSheet.hairlineWidth,

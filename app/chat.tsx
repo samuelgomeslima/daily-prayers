@@ -45,6 +45,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const typingMessageIdRef = useRef<string | null>(null);
 
   const palette = Colors[colorScheme];
   const { chatModel } = useModelSettings();
@@ -77,7 +78,23 @@ export default function ChatScreen() {
       content: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const typingId = `${Date.now()}-assistant-typing`;
+    const typingMessage: ChatMessage = {
+      id: typingId,
+      role: 'assistant',
+      content: 'Digitando...',
+    };
+
+    const previousTypingId = typingMessageIdRef.current;
+
+    setMessages((prev) => {
+      const withoutPreviousTyping = previousTypingId
+        ? prev.filter((message) => message.id !== previousTypingId)
+        : prev;
+
+      return [...withoutPreviousTyping, userMessage, typingMessage];
+    });
+    typingMessageIdRef.current = typingId;
     setInput('');
     setIsSending(true);
 
@@ -123,14 +140,20 @@ export default function ChatScreen() {
         content: assistantText,
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev.filter((message) => message.id !== typingId),
+        assistantMessage,
+      ]);
+      if (typingMessageIdRef.current === typingId) {
+        typingMessageIdRef.current = null;
+      }
     } catch (sendError) {
       const friendlyMessage =
         sendError instanceof Error
           ? sendError.message
           : 'Ocorreu um erro inesperado ao contatar a IA.';
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((message) => message.id !== typingId),
         {
           id: `${Date.now()}-assistant-error`,
           role: 'assistant',
@@ -143,6 +166,9 @@ export default function ChatScreen() {
           content: friendlyMessage,
         },
       ]);
+      if (typingMessageIdRef.current === typingId) {
+        typingMessageIdRef.current = null;
+      }
     } finally {
       setIsSending(false);
     }
@@ -155,15 +181,26 @@ export default function ChatScreen() {
       const textColor = isUser ? '#fff' : palette.text;
       const bubbleBorder = isUser ? `${palette.tint}70` : `${palette.border}99`;
 
+      const isTypingPlaceholder = item.id.endsWith('-assistant-typing');
+
       return (
         <View style={[styles.messageWrapper, isUser ? styles.messageRight : styles.messageLeft]}>
           <View style={[styles.messageBubble, { backgroundColor, borderColor: bubbleBorder }] }>
             <ThemedText style={[styles.messageAuthor, { color: textColor }]} type="defaultSemiBold">
               {isUser ? 'Você' : 'Companheiro de Fé'}
             </ThemedText>
-            <ThemedText style={[styles.messageContent, { color: textColor }]}>
-              {item.content}
-            </ThemedText>
+            {isTypingPlaceholder ? (
+              <View style={styles.typingRow}>
+                <ActivityIndicator size="small" color={isUser ? '#fff' : palette.tint} />
+                <ThemedText style={[styles.messageContent, { color: textColor }]}>
+                  {item.content}
+                </ThemedText>
+              </View>
+            ) : (
+              <ThemedText style={[styles.messageContent, { color: textColor }]}>
+                {item.content}
+              </ThemedText>
+            )}
           </View>
         </View>
       );
@@ -228,11 +265,7 @@ export default function ChatScreen() {
                   opacity: pressed ? 0.9 : 1,
                 },
               ]}>
-              {isSending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <MaterialIcons name="arrow-forward" size={24} color="#fff" />
-              )}
+              <MaterialIcons name="arrow-forward" size={24} color="#fff" />
             </Pressable>
           </View>
         </ThemedView>
@@ -284,6 +317,11 @@ const styles = StyleSheet.create({
   messageContent: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   inputContainer: {
     borderTopWidth: StyleSheet.hairlineWidth,
