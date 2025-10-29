@@ -181,15 +181,26 @@ export default function ChatScreen() {
       const textColor = isUser ? '#fff' : palette.text;
       const bubbleBorder = isUser ? `${palette.tint}70` : `${palette.border}99`;
 
+      const isTypingPlaceholder = item.id.endsWith('-assistant-typing');
+
       return (
         <View style={[styles.messageWrapper, isUser ? styles.messageRight : styles.messageLeft]}>
           <View style={[styles.messageBubble, { backgroundColor, borderColor: bubbleBorder }] }>
             <ThemedText style={[styles.messageAuthor, { color: textColor }]} type="defaultSemiBold">
               {isUser ? 'Você' : 'Companheiro de Fé'}
             </ThemedText>
-            <ThemedText style={[styles.messageContent, { color: textColor }]}>
-              {item.content}
-            </ThemedText>
+            {isTypingPlaceholder ? (
+              <View style={styles.typingRow}>
+                <ActivityIndicator size="small" color={isUser ? '#fff' : palette.tint} />
+                <ThemedText style={[styles.messageContent, { color: textColor }]}>
+                  {item.content}
+                </ThemedText>
+              </View>
+            ) : (
+              <ThemedText style={[styles.messageContent, { color: textColor }]}>
+                {item.content}
+              </ThemedText>
+            )}
           </View>
         </View>
       );
@@ -254,11 +265,7 @@ export default function ChatScreen() {
                   opacity: pressed ? 0.9 : 1,
                 },
               ]}>
-              {isSending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <MaterialIcons name="arrow-forward" size={24} color="#fff" />
-              )}
+              <MaterialIcons name="arrow-forward" size={24} color="#fff" />
             </Pressable>
           </View>
         </ThemedView>
@@ -310,6 +317,11 @@ const styles = StyleSheet.create({
   messageContent: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   inputContainer: {
     borderTopWidth: StyleSheet.hairlineWidth,
