@@ -67,24 +67,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="notes"
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
     </Tabs>
   );
 }
