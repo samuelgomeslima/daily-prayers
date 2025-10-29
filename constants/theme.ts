@@ -5,37 +5,37 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#730fad';
-const tintColorDark = '#0064b2';
+const tintColorLight = '#5c10bf';
+const tintColorDark = '#1e34a8';
 
 export const Colors = {
   light: {
-    text: '#1A0E32',
-    background: '#ffffff',
+    text: '#14205c',
+    background: '#e0fafe',
     tint: tintColorLight,
-    icon: '#0064b2',
-    tabIconDefault: '#9FA6D9',
+    icon: '#1e34a8',
+    tabIconDefault: '#9faaf0',
     tabIconSelected: tintColorLight,
-    surface: '#ffffff',
-    surfaceMuted: '#EDE7F9',
-    border: '#D2C5F1',
-    overlay: 'rgba(115, 15, 173, 0.12)',
-    heroBackground: '#F0F6FF',
-    heroAccent: '#E5F1FF',
+    surface: '#f4f7ff',
+    surfaceMuted: '#dbe5ff',
+    border: '#b9c8ff',
+    overlay: 'rgba(92, 16, 191, 0.12)',
+    heroBackground: '#dcecff',
+    heroAccent: '#c6dbff',
   },
   dark: {
-    text: '#ffffff',
-    background: '#0A0F2A',
+    text: '#e0fafe',
+    background: '#0b123f',
     tint: tintColorDark,
-    icon: '#8ABFE6',
-    tabIconDefault: '#405B8A',
+    icon: '#96a9ff',
+    tabIconDefault: '#3949a6',
     tabIconSelected: tintColorDark,
-    surface: '#141C3F',
-    surfaceMuted: '#1B2352',
-    border: '#233870',
-    overlay: 'rgba(0, 100, 178, 0.2)',
-    heroBackground: '#121B45',
-    heroAccent: '#172A55',
+    surface: '#121a58',
+    surfaceMuted: '#182066',
+    border: '#223080',
+    overlay: 'rgba(30, 52, 168, 0.3)',
+    heroBackground: '#10194f',
+    heroAccent: '#142060',
   },
 };
 
