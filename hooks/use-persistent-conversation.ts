@@ -92,6 +92,22 @@ export const usePersistentConversation = <T extends ConversationMessage>(
   const [conversationId, setConversationIdState] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const pathsRef = useRef<StoragePaths | null>(null);
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  const enqueueMessagesPersist = useCallback(
+    (messagesSnapshot: T[]) => {
+      if (!pathsRef.current) {
+        return;
+      }
+
+      const paths = pathsRef.current;
+
+      writeQueueRef.current = writeQueueRef.current
+        .catch(() => undefined)
+        .then(() => writeMessagesAsync(paths, messagesSnapshot));
+    },
+    []
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -170,8 +186,8 @@ export const usePersistentConversation = <T extends ConversationMessage>(
       return;
     }
 
-    writeMessagesAsync(pathsRef.current, messages);
-  }, [isHydrated, messages]);
+    enqueueMessagesPersist(messages);
+  }, [enqueueMessagesPersist, isHydrated, messages]);
 
   const setPersistedConversationId = useCallback(
     (value: string | null) => {
