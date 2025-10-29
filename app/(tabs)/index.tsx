@@ -51,6 +51,25 @@ export default function HomeScreen() {
         </ThemedText>
       </ThemedView>
 
+      <FeatureCard title="Horários de Missas e Confissões">
+        <ThemedText style={styles.cardText}>
+          Não há API nacional unificada. Mantemos cadastro manual colaborativo e indicamos o
+          guia atualizado da Arquidiocese de Belo Horizonte para ampliar a cobertura.
+        </ThemedText>
+        <View style={styles.actions}>
+          <ExternalLink href="https://www.missadiariabh.com/missadiaria">
+            <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
+          </ExternalLink>
+          <ExternalLink href="https://www.missadiariabh.com/confissoes">
+            <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
+          </ExternalLink>
+        </View>
+        <ThemedText style={styles.cardNote}>
+          • Fichas cadastradas pela comunidade contam com revisão editorial, e os deep links
+          levam direto aos horários oficiais mantidos pela arquidiocese.
+        </ThemedText>
+      </FeatureCard>
+
       <FeatureCard title="Documentos e Liturgia (Vaticano)">
         <ThemedText style={styles.cardText}>
           Direcionamos os usuários para o portal oficial do Vaticano, garantindo acesso
@@ -127,25 +146,6 @@ export default function HomeScreen() {
         <ThemedText style={styles.cardNote}>
           • O cache é renovado diariamente e limpo automaticamente para garantir que novas
           biografias sejam carregadas com pontualidade.
-        </ThemedText>
-      </FeatureCard>
-
-      <FeatureCard title="Horários de Missas e Confissões">
-        <ThemedText style={styles.cardText}>
-          Não há API nacional unificada. Mantemos cadastro manual colaborativo e indicamos o
-          guia atualizado da Arquidiocese de Belo Horizonte para ampliar a cobertura.
-        </ThemedText>
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.missadiariabh.com/missadiaria">
-            <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.missadiariabh.com/confissoes">
-            <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
-          </ExternalLink>
-        </View>
-        <ThemedText style={styles.cardNote}>
-          • Fichas cadastradas pela comunidade contam com revisão editorial, e os deep links
-          levam direto aos horários oficiais mantidos pela arquidiocese.
         </ThemedText>
       </FeatureCard>
     </ParallaxScrollView>
