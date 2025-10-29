@@ -219,29 +219,56 @@ const extractAssistantText = (payload: CatechistResponse) => {
   }
 
   const textSegments: string[] = [];
+  const pushSegment = (value?: string | null) => {
+    if (typeof value !== 'string') {
+      return;
+    }
 
-  if (typeof payload.finalOutput === 'string' && payload.finalOutput.trim()) {
-    textSegments.push(payload.finalOutput.trim());
-  }
+    const trimmed = value.trim();
+
+    if (trimmed.length === 0) {
+      return;
+    }
+
+    textSegments.push(trimmed);
+  };
+
+  pushSegment(payload.finalOutput);
 
   if (Array.isArray(payload.output)) {
     for (const segment of payload.output) {
       if (segment?.type === 'message' && Array.isArray(segment.content)) {
         for (const content of segment.content) {
           if (typeof content?.text === 'string') {
-            textSegments.push(content.text);
+            pushSegment(content.text);
           } else if (typeof content?.value === 'string') {
-            textSegments.push(content.value);
+            pushSegment(content.value);
           }
         }
       } else if (typeof segment?.text === 'string') {
-        textSegments.push(segment.text);
+        pushSegment(segment.text);
       }
     }
   }
 
   if (textSegments.length > 0) {
-    return textSegments.join('\n').trim();
+    const uniqueSegments: string[] = [];
+    const seen = new Set<string>();
+
+    for (const segment of textSegments) {
+      const normalized = segment.replace(/\s+/g, ' ');
+
+      if (seen.has(normalized)) {
+        continue;
+      }
+
+      seen.add(normalized);
+      uniqueSegments.push(segment);
+    }
+
+    if (uniqueSegments.length > 0) {
+      return uniqueSegments.join('\n');
+    }
   }
 
   if (typeof payload.output_text === 'string' && payload.output_text.trim().length > 0) {
