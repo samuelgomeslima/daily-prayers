@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,6 +14,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { resolveChatEndpoint } from '@/utils/chat-endpoint';
 
 const MODEL_LABELS = {
   'gpt-5-mini': 'GPT-5 Mini',
@@ -21,6 +22,11 @@ const MODEL_LABELS = {
 } as const;
 
 type ModelKey = keyof typeof MODEL_LABELS;
+
+type AiAvailabilityState =
+  | { status: 'checking' }
+  | { status: 'available' }
+  | { status: 'unavailable'; message: string; kind?: 'config' | 'network' | 'error' };
 
 type ModelOptionButtonProps = {
   label: string;
@@ -68,6 +74,95 @@ export default function SettingsScreen() {
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
 
+  const [availability, setAvailability] = useState<AiAvailabilityState>({ status: 'checking' });
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const safeSetAvailability = useCallback((value: AiAvailabilityState) => {
+    if (isMountedRef.current) {
+      setAvailability(value);
+    }
+  }, []);
+
+  const checkAvailability = useCallback(async () => {
+    safeSetAvailability({ status: 'checking' });
+
+    const endpoint = resolveChatEndpoint();
+
+    if (!endpoint) {
+      safeSetAvailability({
+        status: 'unavailable',
+        message:
+          'O endpoint da IA não está configurado. Defina EXPO_PUBLIC_CHAT_BASE_URL antes de usar os assistentes.',
+        kind: 'config',
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+
+      if (response.ok || response.status === 400) {
+        safeSetAvailability({ status: 'available' });
+        return;
+      }
+
+      let extractedMessage: string | null = null;
+
+      try {
+        const payload = await response.json();
+        const candidate = payload?.error?.message;
+
+        if (typeof candidate === 'string' && candidate.trim()) {
+          extractedMessage = candidate.trim();
+        }
+      } catch {
+        // Ignore JSON parsing errors and fall back to generic messaging.
+      }
+
+      let fallbackMessage =
+        response.status >= 500
+          ? 'A IA apresentou uma instabilidade. Tente novamente em instantes.'
+          : 'Não foi possível validar a disponibilidade agora. Tente novamente em instantes.';
+
+      if (response.status === 401 || response.status === 403) {
+        fallbackMessage =
+          'O servidor recusou a verificação de disponibilidade. Confira as credenciais configuradas.';
+      } else if (response.status === 429) {
+        fallbackMessage =
+          'A IA atingiu o limite de uso temporariamente. Aguarde alguns minutos antes de tentar novamente.';
+      }
+
+      safeSetAvailability({
+        status: 'unavailable',
+        message: extractedMessage ?? fallbackMessage,
+        kind: 'error',
+      });
+    } catch {
+      safeSetAvailability({
+        status: 'unavailable',
+        message: 'Não foi possível conectar-se à IA. Verifique sua conexão e tente novamente.',
+        kind: 'network',
+      });
+    }
+  }, [safeSetAvailability]);
+
+  useEffect(() => {
+    void checkAvailability();
+  }, [checkAvailability]);
+
   const {
     catechistModel,
     chatModel,
@@ -86,6 +181,46 @@ export default function SettingsScreen() {
     [availableModels]
   );
 
+  const statusVisual = useMemo(() => {
+    switch (availability.status) {
+      case 'available':
+        return {
+          label: 'Disponível',
+          dotColor: '#16A34A',
+          backgroundColor: isDark ? 'rgba(34, 197, 94, 0.24)' : 'rgba(34, 197, 94, 0.12)',
+          borderColor: isDark ? 'rgba(34, 197, 94, 0.32)' : 'rgba(34, 197, 94, 0.32)',
+        };
+      case 'unavailable':
+        return {
+          label: 'Indisponível',
+          dotColor: '#DC2626',
+          backgroundColor: isDark ? 'rgba(248, 113, 113, 0.24)' : 'rgba(248, 113, 113, 0.12)',
+          borderColor: isDark ? 'rgba(248, 113, 113, 0.32)' : 'rgba(248, 113, 113, 0.32)',
+        };
+      default:
+        return {
+          label: 'Verificando...',
+          dotColor: '#F59E0B',
+          backgroundColor: isDark ? 'rgba(251, 191, 36, 0.24)' : 'rgba(253, 224, 71, 0.12)',
+          borderColor: isDark ? 'rgba(251, 191, 36, 0.32)' : 'rgba(251, 191, 36, 0.32)',
+        };
+    }
+  }, [availability.status, isDark]);
+
+  const availabilityMessage = useMemo(() => {
+    if (availability.status === 'available') {
+      return 'A IA está respondendo normalmente.';
+    }
+
+    if (availability.status === 'checking') {
+      return 'Verificando disponibilidade...';
+    }
+
+    return availability.message;
+  }, [availability]);
+
+  const isCheckingAvailability = availability.status === 'checking';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
@@ -100,6 +235,69 @@ export default function SettingsScreen() {
             Personalize quais modelos de IA serão utilizados nos assistentes do
             aplicativo.
           </ThemedText>
+
+          <View
+            style={[
+              styles.aiStatusCard,
+              {
+                backgroundColor: statusVisual.backgroundColor,
+                borderColor: statusVisual.borderColor,
+              },
+            ]}
+          >
+            <View style={styles.aiStatusHeader}>
+              <View style={styles.aiStatusHeaderLeft}>
+                <ThemedText type="subtitle" style={styles.aiStatusTitle}>
+                  Disponibilidade da IA
+                </ThemedText>
+                <View style={styles.aiStatusState}>
+                  <View
+                    style={[styles.aiStatusDot, { backgroundColor: statusVisual.dotColor }]}
+                  />
+                  <ThemedText style={styles.aiStatusStateText}>
+                    {statusVisual.label}
+                  </ThemedText>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => {
+                  void checkAvailability();
+                }}
+                disabled={isCheckingAvailability}
+                style={({ pressed }) => [
+                  styles.aiStatusAction,
+                  { borderColor: palette.tint },
+                  isCheckingAvailability && styles.aiStatusActionDisabled,
+                  pressed && !isCheckingAvailability && styles.aiStatusActionPressed,
+                ]}
+              >
+                {isCheckingAvailability ? (
+                  <ActivityIndicator size="small" color={palette.tint} />
+                ) : (
+                  <ThemedText
+                    style={styles.aiStatusActionLabel}
+                    lightColor={palette.tint}
+                    darkColor={palette.tint}
+                  >
+                    Atualizar
+                  </ThemedText>
+                )}
+              </Pressable>
+            </View>
+            <ThemedText style={styles.aiStatusMessage} lightColor="#4B5563" darkColor="#D1D5DB">
+              {availabilityMessage}
+            </ThemedText>
+            {availability.status === 'unavailable' && availability.kind === 'config' ? (
+              <ThemedText
+                style={styles.aiStatusHint}
+                lightColor="#6B7280"
+                darkColor="#9CA3AF"
+              >
+                Configure a variável EXPO_PUBLIC_CHAT_BASE_URL na build do aplicativo para
+                habilitar os assistentes.
+              </ThemedText>
+            ) : null}
+          </View>
 
           {isLoading ? (
             <View style={styles.loadingBanner}>
@@ -176,6 +374,63 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#6B7280',
+  },
+  aiStatusCard: {
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+  },
+  aiStatusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  aiStatusHeaderLeft: {
+    flex: 1,
+    gap: 8,
+  },
+  aiStatusTitle: {
+    marginBottom: 0,
+  },
+  aiStatusState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+  },
+  aiStatusStateText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  aiStatusMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  aiStatusHint: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  aiStatusAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  aiStatusActionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  aiStatusActionDisabled: {
+    opacity: 0.5,
+  },
+  aiStatusActionPressed: {
+    opacity: 0.85,
   },
   loadingBanner: {
     flexDirection: 'row',
