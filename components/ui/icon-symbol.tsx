@@ -27,6 +27,9 @@ const MAPPING = {
   'checkmark.circle.fill': 'check-circle',
   'info.circle.fill': 'info',
   'xmark.circle.fill': 'close',
+  sparkles: 'auto-fix-high',
+  'chevron.up.circle.fill': 'arrow-circle-up',
+  'chevron.down.circle': 'arrow-circle-down',
 } as IconMapping;
 
 /**

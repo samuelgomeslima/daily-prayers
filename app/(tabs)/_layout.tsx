@@ -40,11 +40,17 @@ export default function TabLayout() {
       <Tabs.Screen
         name="prayers"
         options={{
-          title: 'Orações e Terços',
-          tabBarLabel: ({ color }) => (
-            <TabBarLabel color={color} title="Orações e Terços" />
-          ),
+          title: 'Orações',
+          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Orações" />,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="hands.sparkles.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="rosaries"
+        options={{
+          title: 'Terços',
+          tabBarLabel: ({ color }) => <TabBarLabel color={color} title="Terços" />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
         }}
       />
       <Tabs.Screen
