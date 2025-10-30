@@ -24,6 +24,12 @@ const OPTIONS: MoreOption[] = [
     href: '/chat',
   },
   {
+    title: 'Plano de Vida',
+    description: 'Defina práticas espirituais e acompanhe seu progresso.',
+    icon: 'hands.sparkles.fill',
+    href: '/life-plan',
+  },
+  {
     title: 'Anotações',
     description: 'Registre inspirações, intenções e lembretes espirituais.',
     icon: 'square.and.pencil',

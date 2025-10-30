@@ -51,6 +51,10 @@ export default function RootLayout() {
             options={{ title: 'IA Católica' }}
           />
           <Stack.Screen
+            name="life-plan"
+            options={{ title: 'Plano de Vida', headerShown: false }}
+          />
+          <Stack.Screen
             name="notes"
             options={{ title: 'Anotações' }}
           />
