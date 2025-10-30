@@ -2,7 +2,7 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { SaintJosephLily } from '@/components/saint-joseph-lily';
+import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -43,8 +43,8 @@ export default function MoreScreen() {
 
   return (
     <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
-      <SaintJosephLily size={160} opacity={0.15} style={styles.lilyTop} />
-      <SaintJosephLily size={140} opacity={0.12} style={styles.lilyBottom} />
+      <HolySpiritSymbol size={160} opacity={0.15} style={styles.symbolTop} />
+      <HolySpiritSymbol size={140} opacity={0.12} style={styles.symbolBottom} />
       <ThemedText style={styles.heading}>Mais recursos</ThemedText>
       <View style={styles.optionsContainer}>
         {OPTIONS.map((option) => (
@@ -90,12 +90,12 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  lilyTop: {
+  symbolTop: {
     position: 'absolute',
     top: -40,
     right: -30,
   },
-  lilyBottom: {
+  symbolBottom: {
     position: 'absolute',
     bottom: -50,
     left: -20,

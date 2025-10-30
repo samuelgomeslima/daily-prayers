@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { SaintJosephLily } from '@/components/saint-joseph-lily';
+import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -44,7 +44,7 @@ export default function PrayersScreen() {
       headerImage={
         <View style={styles.headerImage}>
           <View style={[styles.headerGlow, { backgroundColor: `${palette.tint}1A` }]} />
-          <SaintJosephLily size={220} opacity={0.8} style={styles.headerLily} />
+          <HolySpiritSymbol size={220} opacity={0.8} style={styles.headerSymbol} />
           <IconSymbol
             size={72}
             color={palette.tint}
@@ -54,7 +54,7 @@ export default function PrayersScreen() {
         </View>
       }>
       <ThemedView style={styles.titleContainer}>
-        <SaintJosephLily size={96} opacity={0.18} style={styles.titleLily} />
+        <HolySpiritSymbol size={96} opacity={0.18} style={styles.titleSymbol} />
         <ThemedText type="title" style={[styles.title, { fontFamily: Fonts.rounded }]}> 
           Orações
         </ThemedText>
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     transform: [{ translateY: 32 }],
   },
-  headerLily: {
+  headerSymbol: {
     transform: [{ translateY: 30 }],
   },
   headerIcon: {
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  titleLily: {
+  titleSymbol: {
     position: 'absolute',
     right: -20,
     top: -16,

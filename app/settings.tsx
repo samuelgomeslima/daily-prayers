@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { SaintJosephLily } from '@/components/saint-joseph-lily';
+import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -225,8 +225,8 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
-        <SaintJosephLily size={240} opacity={0.1} style={styles.lilyTop} pointerEvents="none" />
-        <SaintJosephLily size={200} opacity={0.08} style={styles.lilyBottom} pointerEvents="none" />
+        <HolySpiritSymbol size={240} opacity={0.1} style={styles.symbolTop} pointerEvents="none" />
+        <HolySpiritSymbol size={200} opacity={0.08} style={styles.symbolBottom} pointerEvents="none" />
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -478,12 +478,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
   },
-  lilyTop: {
+  symbolTop: {
     position: 'absolute',
     top: -60,
     right: -50,
   },
-  lilyBottom: {
+  symbolBottom: {
     position: 'absolute',
     bottom: -80,
     left: -30,

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { SaintJosephLily } from '@/components/saint-joseph-lily';
+import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -217,8 +217,8 @@ export default function ChatScreen() {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
         <ThemedView style={[styles.container, { backgroundColor: screenBackground }]}>
-          <SaintJosephLily size={220} opacity={0.12} style={styles.lilyTop} pointerEvents="none" />
-          <SaintJosephLily size={180} opacity={0.1} style={styles.lilyBottom} pointerEvents="none" />
+          <HolySpiritSymbol size={220} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
+          <HolySpiritSymbol size={180} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
           <FlatList
             ref={listRef}
             data={messages}
@@ -353,12 +353,12 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
   },
-  lilyTop: {
+  symbolTop: {
     position: 'absolute',
     top: -60,
     right: -40,
   },
-  lilyBottom: {
+  symbolBottom: {
     position: 'absolute',
     bottom: -80,
     left: -20,
