@@ -45,29 +45,45 @@ export default function MoreScreen() {
     <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
       <HolySpiritSymbol size={160} opacity={0.15} style={styles.symbolTop} />
       <HolySpiritSymbol size={140} opacity={0.12} style={styles.symbolBottom} />
-      <ThemedText style={styles.heading}>Mais recursos</ThemedText>
+      <View
+        style={[
+          styles.headerCard,
+          {
+            borderColor: `${palette.border}55`,
+            backgroundColor: colorScheme === 'dark' ? Colors.dark.surfaceMuted : Colors.light.surfaceMuted,
+            shadowColor: `${palette.tint}1A`,
+          },
+        ]}
+      >
+        <ThemedText style={styles.heading}>Mais recursos</ThemedText>
+        <ThemedText style={styles.subtitle}>
+          Aprofunde sua experiência espiritual com ferramentas pensadas para o seu dia a dia de oração.
+        </ThemedText>
+      </View>
       <View style={styles.optionsContainer}>
         {OPTIONS.map((option) => (
           <Link key={option.href} href={option.href} asChild>
             <Pressable style={({ pressed }) => [
                 styles.option,
                 {
-                  borderColor: `${palette.border}88`,
-                  backgroundColor: pressed
-                    ? `${palette.tint}1F`
-                    : colorScheme === 'dark'
-                      ? Colors.dark.surface
-                      : Colors.light.surface,
+                  borderColor: `${palette.border}66`,
+                  backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
                   shadowColor: `${palette.tint}1A`,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
                 },
               ]}
             >
-              <IconSymbol
-                name={option.icon}
-                size={28}
-                color={palette.tint}
-                style={styles.optionIcon}
-              />
+              <View
+                style={[
+                  styles.iconContainer,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}15`,
+                    borderColor: `${palette.tint}30`,
+                  },
+                ]}
+              >
+                <IconSymbol name={option.icon} size={24} color={palette.tint} />
+              </View>
               <View style={styles.textContainer}>
                 <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
                 <ThemedText style={styles.optionDescription}>{option.description}</ThemedText>
@@ -101,28 +117,49 @@ const styles = StyleSheet.create({
     left: -20,
     transform: [{ scaleX: -1 }],
   },
+  headerCard: {
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 3,
+  },
   heading: {
     fontSize: 24,
     fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    opacity: 0.82,
   },
   optionsContainer: {
-    gap: 12,
+    gap: 16,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    gap: 16,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    elevation: 2,
+    gap: 18,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 3,
   },
-  optionIcon: {
-    marginRight: 4,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   textContainer: {
     flex: 1,
