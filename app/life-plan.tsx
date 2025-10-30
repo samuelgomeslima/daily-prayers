@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -188,23 +188,37 @@ export default function LifePlanScreen() {
   const [formFrequency, setFormFrequency] = useState<PracticeFrequency>('daily');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const persistPlanToStorage = useCallback(async (nextPlan: LifePlanPractice[]) => {
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  const persistPlanToStorage = useCallback((nextPlan: LifePlanPractice[]) => {
     if (!LIFE_PLAN_STORAGE_FILE) {
-      return;
+      return Promise.resolve();
     }
 
-    try {
-      const payload: LifePlanStorage = {
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        practices: nextPlan,
-      };
-      await FileSystem.writeAsStringAsync(LIFE_PLAN_STORAGE_FILE, JSON.stringify(payload));
-      setStorageWarning(null);
-    } catch (error) {
-      console.error('Failed to save life plan', error);
-      setStorageWarning('Não foi possível salvar as alterações localmente. Elas podem ser perdidas.');
-    }
+    const runSave = async () => {
+      try {
+        const payload: LifePlanStorage = {
+          version: 1,
+          updatedAt: new Date().toISOString(),
+          practices: nextPlan,
+        };
+        await FileSystem.writeAsStringAsync(LIFE_PLAN_STORAGE_FILE, JSON.stringify(payload));
+        setStorageWarning(null);
+      } catch (error) {
+        console.error('Failed to save life plan', error);
+        setStorageWarning('Não foi possível salvar as alterações localmente. Elas podem ser perdidas.');
+      }
+    };
+
+    const queuedSave = saveQueueRef.current
+      .catch(() => {
+        // Swallow errors from previous saves to keep the queue intact.
+      })
+      .then(runSave);
+
+    saveQueueRef.current = queuedSave;
+
+    return queuedSave;
   }, []);
 
   useEffect(() => {
