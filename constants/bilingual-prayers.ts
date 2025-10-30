@@ -135,14 +135,14 @@ Oremus: Deus, qui corda fidelium Sancti Spiritus illustratione docuisti, da nobi
     latin: `Angele Dei, qui custos es mei, me tibi commissum pietate superna; hodie illumina, custodi, rege et guberna. Amen.`,
   },
   {
-    id: 'acto-de-contricao',
-    title: 'Acto de Contrição',
+    id: 'ato-de-contricao',
+    title: 'Ato de Contrição',
     portuguese: `Meu Deus, porque sois infinitamente bom e vos amo de todo o coração, arrependo-me de todos os meus pecados e proponho firmemente, com o auxílio da vossa graça, confessar-me, fazer penitência e emendar a minha vida. Amém.`,
     latin: `Deus meus, ex toto corde paenitet me omnium peccatorum meorum, quia peccando non solum poenas a te iuste statutas merui, sed praesertim quia offendi te, summum bonum ac dignum qui super omnia diligaris. Ideo firmiter propono, adiuvante gratia tua, de cetero non peccare et proximam peccandi occasionem fugere. Amen.`,
   },
   {
-    id: 'acto-de-caridade',
-    title: 'Acto de Caridade',
+    id: 'ato-de-caridade',
+    title: 'Ato de Caridade',
     portuguese: `Meu Deus, eu vos amo de todo o coração, sobre todas as coisas, porque sois infinitamente bom e nossa eterna felicidade; e, por amor de vós, amo o meu próximo como a mim mesmo. Amém.`,
     latin: `Domine Deus, amo te super omnia et proximum meum propter te, quia tu es summum bonum, infinitum et perfectissimum, omni amore dignum. In hac caritate vivere et mori propono. Amen.`,
   },
