@@ -9,12 +9,12 @@ type HolySpiritSymbolProps = ViewProps & {
 
 export function HolySpiritSymbol({ size = 160, opacity = 1, style, ...rest }: HolySpiritSymbolProps) {
   const auraColor = useThemeColor(
-    { light: 'rgba(12, 183, 242, 0.12)', dark: 'rgba(74, 208, 255, 0.18)' },
+    { light: 'rgba(5, 142, 217, 0.12)', dark: 'rgba(76, 184, 248, 0.16)' },
     'overlay'
   );
-  const doveColor = useThemeColor({ light: '#ffffff', dark: '#E4F6FF' }, 'surface');
-  const accentColor = useThemeColor({ light: '#0CB7F2', dark: '#4AD0FF' }, 'tint');
-  const rayColor = useThemeColor({ light: '#7DDCFF', dark: '#2FB7E8' }, 'icon');
+  const doveColor = useThemeColor({ light: '#ffffff', dark: '#E3F4FF' }, 'surface');
+  const accentColor = useThemeColor({ light: '#058ED9', dark: '#4CB8F8' }, 'tint');
+  const rayColor = useThemeColor({ light: '#6FC4F1', dark: '#2C9BD7' }, 'icon');
 
   const width = size;
   const height = size * 1.1;
