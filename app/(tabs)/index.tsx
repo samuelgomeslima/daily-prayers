@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { SaintJosephLily } from '@/components/saint-joseph-lily';
+import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
@@ -37,11 +37,11 @@ export default function HomeScreen() {
               },
             ]}
           />
-          <SaintJosephLily size={220} opacity={0.75} style={styles.headerLily} />
+          <HolySpiritSymbol size={220} opacity={0.75} style={styles.headerSymbol} />
         </View>
       }>
       <ThemedView style={styles.titleContainer}>
-        <SaintJosephLily size={110} opacity={0.22} style={styles.titleLily} />
+        <HolySpiritSymbol size={110} opacity={0.22} style={styles.titleSymbol} />
         <ThemedText type="title" style={styles.title}>
           Conteúdo litúrgico oficial
         </ThemedText>
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     opacity: 0.6,
   },
-  headerLily: {
+  headerSymbol: {
     transform: [{ translateY: 32 }],
   },
   titleContainer: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  titleLily: {
+  titleSymbol: {
     position: 'absolute',
     right: -20,
     top: -30,

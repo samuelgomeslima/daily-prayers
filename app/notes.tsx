@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { SaintJosephLily } from '@/components/saint-joseph-lily';
+import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
@@ -346,8 +346,8 @@ export default function NotesScreen() {
       style={styles.flex}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
       <ThemedView style={styles.container}>
-        <SaintJosephLily size={200} opacity={0.12} style={styles.lilyTop} pointerEvents="none" />
-        <SaintJosephLily size={160} opacity={0.1} style={styles.lilyBottom} pointerEvents="none" />
+        <HolySpiritSymbol size={200} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
+        <HolySpiritSymbol size={160} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
         <FlatList
           data={filteredNotes}
           keyExtractor={(item) => item.id}
@@ -480,12 +480,12 @@ const styles = StyleSheet.create({
   header: {
     gap: 16,
   },
-  lilyTop: {
+  symbolTop: {
     position: 'absolute',
     top: -60,
     right: -40,
   },
-  lilyBottom: {
+  symbolBottom: {
     position: 'absolute',
     bottom: -70,
     left: -30,
