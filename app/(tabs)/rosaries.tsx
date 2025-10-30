@@ -118,9 +118,9 @@ const rosarySequence: PrayerSequence = {
   ],
 };
 
-const divineMercySequence: PrayerSequence = {
+const mercySequence: PrayerSequence = {
   id: 'divine-mercy-chaplet',
-  name: 'Terço da Divina Misericórdia',
+  name: 'Terço da Misericórdia',
   description: 'Use as contas do rosário para acompanhar as invocações da Divina Misericórdia.',
   sections: [
     {
@@ -166,14 +166,214 @@ const divineMercySequence: PrayerSequence = {
   ],
 };
 
-const sequences: PrayerSequence[] = [rosarySequence, divineMercySequence];
+const saintJosephSequence: PrayerSequence = {
+  id: 'saint-joseph-chaplet',
+  name: 'Terço de São José',
+  description:
+    'Recorde as virtudes do patrono da Igreja, pedindo sua intercessão paternal em cada conta.',
+  sections: [
+    {
+      title: 'Abertura',
+      description: 'Sinal da Cruz seguido de uma oração a São José e um Pai-Nosso.',
+      beads: [
+        { id: 'joseph-opening-cross', label: 'Sinal da Cruz', type: 'marker' },
+        { id: 'joseph-opening-prayer', label: 'Oração a São José', type: 'large' },
+        { id: 'joseph-opening-our-father', label: 'Pai-Nosso', type: 'large' },
+      ],
+    },
+    ...Array.from({ length: 5 }, (_, index) => {
+      const decadeNumber = index + 1;
+      return {
+        title: `Dezena ${decadeNumber}`,
+        description:
+          'No Pai-Nosso medite em São José e nas contas menores repita “São José, valei-nos!”.',
+        beads: [
+          {
+            id: `joseph-decade-${decadeNumber}-our-father`,
+            label: 'Pai-Nosso',
+            type: 'large',
+          },
+          ...Array.from({ length: 10 }, (_, beadIndex) => ({
+            id: `joseph-decade-${decadeNumber}-hail-${beadIndex + 1}`,
+            label: `São José ${beadIndex + 1}`,
+            type: 'small',
+          })),
+          {
+            id: `joseph-decade-${decadeNumber}-glory`,
+            label: 'Glória ao Pai',
+            type: 'marker',
+          },
+        ],
+      };
+    }),
+    {
+      title: 'Conclusão',
+      description: 'Reze o Lembrai-vos de São José e agradeça pela proteção recebida.',
+      beads: [
+        { id: 'joseph-closing-remember', label: 'Lembrai-vos', type: 'marker' },
+        { id: 'joseph-closing-final-prayer', label: 'Agradecimento final', type: 'marker' },
+      ],
+    },
+  ],
+};
+
+const immaculateHeartSequence: PrayerSequence = {
+  id: 'immaculate-heart-chaplet',
+  name: 'Terço do Imaculado Coração de Maria',
+  description:
+    'Consagre-se ao Imaculado Coração meditando sobre sua ternura materna e pedidos de reparação.',
+  sections: [
+    {
+      title: 'Abertura',
+      description: 'Inicie com o Sinal da Cruz, ato de consagração e um Pai-Nosso.',
+      beads: [
+        { id: 'immaculate-opening-cross', label: 'Sinal da Cruz', type: 'marker' },
+        { id: 'immaculate-opening-consecration', label: 'Ato de Consagração', type: 'large' },
+        { id: 'immaculate-opening-our-father', label: 'Pai-Nosso', type: 'large' },
+      ],
+    },
+    ...Array.from({ length: 5 }, (_, index) => {
+      const decadeNumber = index + 1;
+      return {
+        title: `Dezena ${decadeNumber}`,
+        description:
+          'Ofereça cada dezena em reparação ao Imaculado Coração rezando “Coração de Maria, intercedei por nós”.',
+        beads: [
+          {
+            id: `immaculate-decade-${decadeNumber}-our-father`,
+            label: 'Pai-Nosso',
+            type: 'large',
+          },
+          ...Array.from({ length: 10 }, (_, beadIndex) => ({
+            id: `immaculate-decade-${decadeNumber}-invocation-${beadIndex + 1}`,
+            label: `Intercedei ${beadIndex + 1}`,
+            type: 'small',
+          })),
+          {
+            id: `immaculate-decade-${decadeNumber}-glory`,
+            label: 'Glória ao Pai',
+            type: 'marker',
+          },
+        ],
+      };
+    }),
+    {
+      title: 'Conclusão',
+      description: 'Finalize com o Magnificat e a oração do Ângelus opcional.',
+      beads: [
+        { id: 'immaculate-closing-magnificat', label: 'Magnificat', type: 'marker' },
+        { id: 'immaculate-closing-angelus', label: 'Ângelus', type: 'marker' },
+      ],
+    },
+  ],
+};
+
+const byzantineSequence: PrayerSequence = {
+  id: 'byzantine-chaplet',
+  name: 'Terço Bizantino (Cicotki)',
+  description:
+    'Percorra a corda de oração com a Oração de Jesus, marcando cada invocação compassada.',
+  sections: [
+    {
+      title: 'Início',
+      description: 'Sinal da Cruz oriental e invocações à Santíssima Trindade.',
+      beads: [
+        { id: 'byzantine-opening-cross', label: 'Sinal da Cruz', type: 'marker' },
+        { id: 'byzantine-opening-trisagion', label: 'Triságion', type: 'large' },
+      ],
+    },
+    ...Array.from({ length: 4 }, (_, segmentIndex) => {
+      const segmentNumber = segmentIndex + 1;
+      return {
+        title: `Série ${segmentNumber}`,
+        description:
+          'Repita a Oração de Jesus em cada nó, mantendo o ritmo de respiração e a atenção no Nome.',
+        beads: [
+          ...Array.from({ length: 25 }, (_, beadIndex) => ({
+            id: `byzantine-series-${segmentNumber}-jesus-prayer-${beadIndex + 1}`,
+            label: `Oração de Jesus ${beadIndex + 1}`,
+            type: 'small',
+          })),
+        ],
+      };
+    }),
+    {
+      title: 'Conclusão',
+      description: 'Agradeça em silêncio e encerre com o Pai-Nosso e o Hino à Mãe de Deus.',
+      beads: [
+        { id: 'byzantine-closing-our-father', label: 'Pai-Nosso', type: 'large' },
+        { id: 'byzantine-closing-theotokos', label: 'Hino à Mãe de Deus', type: 'marker' },
+      ],
+    },
+  ],
+};
+
+const missionarySequence: PrayerSequence = {
+  id: 'missionary-chaplet',
+  name: 'Terço Missionário',
+  description:
+    'Reze pelos cinco continentes oferecendo cada dezena por uma intenção missionária específica.',
+  sections: [
+    {
+      title: 'Abertura',
+      description: 'Sinal da Cruz, oração do Espírito Santo e um Pai-Nosso.',
+      beads: [
+        { id: 'missionary-opening-cross', label: 'Sinal da Cruz', type: 'marker' },
+        { id: 'missionary-opening-holy-spirit', label: 'Vinde Espírito Santo', type: 'large' },
+        { id: 'missionary-opening-our-father', label: 'Pai-Nosso', type: 'large' },
+      ],
+    },
+    ...[
+      { continent: 'África', color: 'verde' },
+      { continent: 'Américas', color: 'vermelho' },
+      { continent: 'Europa', color: 'branco' },
+      { continent: 'Oceania', color: 'azul' },
+      { continent: 'Ásia', color: 'amarelo' },
+    ].map(({ continent, color }, index) => ({
+      title: `Dezena ${index + 1} — ${continent}`,
+      description: `Ofereça pelas missões na ${continent}, lembrando o significado da cor ${color}.`,
+      beads: [
+        {
+          id: `missionary-decade-${index + 1}-our-father`,
+          label: 'Pai-Nosso',
+          type: 'large',
+        },
+        ...Array.from({ length: 10 }, (_, beadIndex) => ({
+          id: `missionary-decade-${index + 1}-hail-${beadIndex + 1}`,
+          label: `Ave-Maria ${beadIndex + 1}`,
+          type: 'small',
+        })),
+        {
+          id: `missionary-decade-${index + 1}-glory`,
+          label: 'Glória ao Pai',
+          type: 'marker',
+        },
+      ],
+    })),
+    {
+      title: 'Conclusão',
+      description: 'Reze a oração do Anjo Missionário e a bênção final.',
+      beads: [
+        { id: 'missionary-closing-prayer', label: 'Oração Missionária', type: 'marker' },
+        { id: 'missionary-closing-blessing', label: 'Bênção final', type: 'marker' },
+      ],
+    },
+  ],
+};
+
+const sequences: PrayerSequence[] = [
+  rosarySequence,
+  mercySequence,
+  saintJosephSequence,
+  immaculateHeartSequence,
+  byzantineSequence,
+  missionarySequence,
+];
 
 export default function RosariesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
-  const [expandedSequenceId, setExpandedSequenceId] = useState<string | null>(
-    sequences[0]?.id ?? null,
-  );
+  const [expandedSequenceId, setExpandedSequenceId] = useState<string | null>(null);
 
   const toggleSequence = (sequenceId: string) => {
     setExpandedSequenceId((current) => (current === sequenceId ? null : sequenceId));
