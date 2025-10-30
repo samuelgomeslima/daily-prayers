@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
@@ -51,54 +51,61 @@ export default function MoreScreen() {
     <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
       <HolySpiritSymbol size={160} opacity={0.15} style={styles.symbolTop} />
       <HolySpiritSymbol size={140} opacity={0.12} style={styles.symbolBottom} />
-      <View
-        style={[
-          styles.headerCard,
-          {
-            borderColor: `${palette.border}55`,
-            backgroundColor: colorScheme === 'dark' ? Colors.dark.surfaceMuted : Colors.light.surfaceMuted,
-            shadowColor: `${palette.tint}1A`,
-          },
-        ]}
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        bounces
       >
-        <ThemedText style={styles.heading}>Mais recursos</ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Aprofunde sua experiência espiritual com ferramentas pensadas para o seu dia a dia de oração.
-        </ThemedText>
-      </View>
-      <View style={styles.optionsContainer}>
-        {OPTIONS.map((option) => (
-          <Link key={option.href} href={option.href} asChild>
-            <Pressable style={({ pressed }) => [
-                styles.option,
-                {
-                  borderColor: `${palette.border}66`,
-                  backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
-                  shadowColor: `${palette.tint}1A`,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.iconContainer,
+        <View
+          style={[
+            styles.headerCard,
+            {
+              borderColor: `${palette.border}55`,
+              backgroundColor: colorScheme === 'dark' ? Colors.dark.surfaceMuted : Colors.light.surfaceMuted,
+              shadowColor: `${palette.tint}1A`,
+            },
+          ]}
+        >
+          <ThemedText style={styles.heading}>Mais recursos</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Aprofunde sua experiência espiritual com ferramentas pensadas para o seu dia a dia de oração.
+          </ThemedText>
+        </View>
+        <View style={styles.optionsContainer}>
+          {OPTIONS.map((option) => (
+            <Link key={option.href} href={option.href} asChild>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.option,
                   {
-                    backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}15`,
-                    borderColor: `${palette.tint}30`,
+                    borderColor: `${palette.border}66`,
+                    backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
+                    shadowColor: `${palette.tint}1A`,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
                 ]}
               >
-                <IconSymbol name={option.icon} size={24} color={palette.tint} />
-              </View>
-              <View style={styles.textContainer}>
-                <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
-                <ThemedText style={styles.optionDescription}>{option.description}</ThemedText>
-              </View>
-              <IconSymbol name="chevron.right" size={20} color={palette.icon} />
-            </Pressable>
-          </Link>
-        ))}
-      </View>
+                <View
+                  style={[
+                    styles.iconContainer,
+                    {
+                      backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}15`,
+                      borderColor: `${palette.tint}30`,
+                    },
+                  ]}
+                >
+                  <IconSymbol name={option.icon} size={24} color={palette.tint} />
+                </View>
+                <View style={styles.textContainer}>
+                  <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
+                  <ThemedText style={styles.optionDescription}>{option.description}</ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={20} color={palette.icon} />
+              </Pressable>
+            </Link>
+          ))}
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -106,11 +113,13 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    gap: 16,
     position: 'relative',
     overflow: 'hidden',
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 40,
   },
   symbolTop: {
     position: 'absolute',
@@ -145,6 +154,7 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     gap: 16,
+    marginTop: 16,
   },
   option: {
     flexDirection: 'row',
