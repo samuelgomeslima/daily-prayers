@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Colors, Fonts } from '@/constants/theme';
@@ -19,6 +19,41 @@ type RosaryMysteryTrackerProps = {
   sets: MysterySet[];
 };
 
+const SAO_PAULO_TIME_ZONE = 'America/Sao_Paulo';
+
+const weekdayToSetId: Record<string, MysterySet['id']> = {
+  Sunday: 'glorious',
+  Monday: 'joyful',
+  Tuesday: 'sorrowful',
+  Wednesday: 'glorious',
+  Thursday: 'luminous',
+  Friday: 'sorrowful',
+  Saturday: 'joyful',
+};
+
+const getTodaySetId = (sets: MysterySet[]): MysterySet['id'] | '' => {
+  if (sets.length === 0) {
+    return '';
+  }
+
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      timeZone: SAO_PAULO_TIME_ZONE,
+    });
+    const weekday = formatter.format(new Date());
+    const mappedId = weekdayToSetId[weekday];
+
+    if (!mappedId) {
+      return sets[0]?.id ?? '';
+    }
+
+    return sets.find((set) => set.id === mappedId)?.id ?? sets[0]?.id ?? '';
+  } catch (error) {
+    return sets[0]?.id ?? '';
+  }
+};
+
 export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -27,9 +62,28 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
   const borderColor = useThemeColor({}, 'border');
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
 
-  const defaultSetId = sets[0]?.id;
-  const [selectedSetId, setSelectedSetId] = useState(defaultSetId ?? '');
+  const todaySetId = useMemo(() => getTodaySetId(sets), [sets]);
+  const defaultSetId = todaySetId || sets[0]?.id || '';
+  const [selectedSetId, setSelectedSetId] = useState(defaultSetId);
   const [completedMysteries, setCompletedMysteries] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setSelectedSetId((current) => {
+      if (todaySetId && current !== todaySetId) {
+        return todaySetId;
+      }
+
+      if (!current && defaultSetId) {
+        return defaultSetId;
+      }
+
+      if (!sets.some((set) => set.id === current)) {
+        return todaySetId || defaultSetId;
+      }
+
+      return current;
+    });
+  }, [todaySetId, defaultSetId, sets]);
 
   const currentSet = useMemo(() => {
     if (selectedSetId) {
@@ -84,6 +138,7 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
       <View style={styles.tabRow}>
         {sets.map((set) => {
           const isSelected = set.id === currentSet.id;
+          const isTodaySet = set.id === todaySetId;
           return (
             <Pressable
               key={set.id}
@@ -103,25 +158,65 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
             >
-              <ThemedText
-                type="defaultSemiBold"
-                style={[
-                  styles.tabButtonLabel,
-                  { color: isSelected ? accentColor : mutedText },
-                ]}
-              >
-                {set.title}
-              </ThemedText>
+              <View style={styles.tabLabelWrapper}>
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={[
+                    styles.tabButtonLabel,
+                    { color: isSelected ? accentColor : mutedText },
+                  ]}
+                >
+                  {set.title}
+                </ThemedText>
+                {isTodaySet && (
+                  <ThemedView
+                    style={[
+                      styles.todayBadge,
+                      { backgroundColor: `${accentColor}1F`, borderColor: `${accentColor}33` },
+                    ]}
+                  >
+                    <ThemedText
+                      type="defaultSemiBold"
+                      style={[styles.todayBadgeText, { color: accentColor }]}
+                    >
+                      Hoje
+                    </ThemedText>
+                  </ThemedView>
+                )}
+              </View>
             </Pressable>
           );
         })}
       </View>
 
       <ThemedView
-        style={[styles.card, { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}14` }]}
+        style={[
+          styles.card,
+          { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}14` },
+          currentSet.id === todaySetId && {
+            borderColor: `${accentColor}AA`,
+            backgroundColor: `${accentColor}10`,
+            shadowColor: `${accentColor}26`,
+          },
+        ]}
         lightColor={Colors.light.surface}
         darkColor={Colors.dark.surface}
       >
+        {currentSet.id === todaySetId && (
+          <ThemedView
+            style={[
+              styles.todayBanner,
+              { backgroundColor: `${accentColor}1F`, borderColor: `${accentColor}33` },
+            ]}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={[styles.todayBannerText, { color: accentColor }]}
+            >
+              Mistérios indicados para hoje
+            </ThemedText>
+          </ThemedView>
+        )}
         <ThemedText type="subtitle" style={[styles.cardTitle, { fontFamily: Fonts.serif }]}>
           {currentSet.title}
         </ThemedText>
@@ -201,6 +296,21 @@ const styles = StyleSheet.create({
   tabButtonLabel: {
     fontSize: 13,
   },
+  tabLabelWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  todayBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  todayBadgeText: {
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
   card: {
     padding: 18,
     borderRadius: 16,
@@ -219,6 +329,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  todayBanner: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  todayBannerText: {
+    fontSize: 13,
+    letterSpacing: 0.6,
   },
   cardHeaderRow: {
     flexDirection: 'row',
