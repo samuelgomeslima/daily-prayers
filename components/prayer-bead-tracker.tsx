@@ -7,6 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
+import { IconSymbol } from './ui/icon-symbol';
 
 type PrayerBeadType = 'marker' | 'large' | 'small';
 
@@ -54,6 +55,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   const [roundsCompleted, setRoundsCompleted] = useState(0);
   const [targetRounds, setTargetRounds] = useState(1);
   const [focusSectionIndex, setFocusSectionIndex] = useState<number | null>(null);
+  const [isCountModeOpen, setIsCountModeOpen] = useState(false);
 
   const beadOrder = useMemo(
     () => sequence.sections.flatMap((section) => section.beads.map((bead) => bead.id)),
@@ -111,6 +113,27 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   const focusNextButtonLabel = focusSectionTitle.includes('dezena')
     ? 'Ir para a próxima dezena'
     : 'Ir para a próxima etapa';
+  const focusSectionProgressCount = focusSectionMarked.length;
+  const focusSectionIsAtStart = focusSectionProgressCount === 0;
+  const focusSectionCurrentBeadIndex = focusSectionCurrentBead?.id
+    ? beadMetadata.get(focusSectionCurrentBead.id)?.beadIndex ?? null
+    : null;
+  const focusSectionHasBeads = focusSectionBeads.length > 0;
+  const focusSectionCurrentIsLastBead =
+    focusSectionCurrentBeadIndex !== null &&
+    focusSectionHasBeads &&
+    focusSectionCurrentBeadIndex === focusSectionBeads.length - 1;
+  const previousMarkedBeadInfo = previousMarkedBeadId
+    ? beadMetadata.get(previousMarkedBeadId)
+    : undefined;
+  const isPreviousMarkedInFocusSection =
+    focusSectionIndex !== null && previousMarkedBeadInfo?.sectionIndex === focusSectionIndex;
+  const isFocusUndoDisabled =
+    !previousMarkedBeadId ||
+    !isPreviousMarkedInFocusSection ||
+    focusSectionIsAtStart ||
+    focusSectionCurrentIsLastBead ||
+    (focusSectionHasBeads && focusSectionCurrentBeadIndex === null);
 
   const toggleBead = (beadId: string) => {
     setMarkedBeads((current) => {
@@ -215,6 +238,10 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
     setFocusSectionIndex(nextIndex);
   };
 
+  const toggleCountMode = () => {
+    setIsCountModeOpen((current) => !current);
+  };
+
   return (
     <ThemedView
       style={[styles.container, { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}1F` }]}
@@ -270,14 +297,15 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                 <View style={styles.focusFlowControls}>
                   <Pressable
                     onPress={undoLastBead}
-                    disabled={!previousMarkedBeadId}
+                    disabled={isFocusUndoDisabled}
                     style={({ pressed }) => [
                       styles.focusFlowButton,
                       { borderColor, backgroundColor: markerIdleColor },
-                      !previousMarkedBeadId && styles.focusFlowButtonDisabled,
-                      pressed && previousMarkedBeadId && { opacity: 0.7 },
+                      isFocusUndoDisabled && styles.focusFlowButtonDisabled,
+                      pressed && !isFocusUndoDisabled && { opacity: 0.7 },
                     ]}
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: isFocusUndoDisabled }}
                     accessibilityLabel="Voltar uma conta"
                   >
                     <ThemedText style={styles.focusFlowButtonLabel}>Voltar conta</ThemedText>
@@ -406,6 +434,93 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
         </View>
         <View style={styles.flowSection}>
           <Pressable
+            onPress={toggleCountMode}
+            style={({ pressed }) => [
+              styles.countModeToggle,
+              { borderColor, backgroundColor: `${accentColor}12` },
+              pressed && { opacity: 0.8 },
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isCountModeOpen }}
+            accessibilityLabel="Alternar modo conta a conta"
+          >
+            <ThemedText style={[styles.countModeToggleLabel, { color: accentColor }]}>
+              Modo conta a conta
+            </ThemedText>
+            <IconSymbol
+              name={isCountModeOpen ? 'chevron.up.circle.fill' : 'chevron.down.circle'}
+              size={24}
+              color={accentColor}
+            />
+          </Pressable>
+          {isCountModeOpen ? (
+            <View style={styles.countModeContent}>
+              <View style={styles.flowControls}>
+                <Pressable
+                  onPress={undoLastBead}
+                  disabled={!previousMarkedBeadId}
+                  style={({ pressed }) => [
+                    styles.flowButton,
+                    {
+                      borderColor,
+                      backgroundColor: markerIdleColor,
+                    },
+                    !previousMarkedBeadId && styles.flowButtonDisabled,
+                    pressed && previousMarkedBeadId && { opacity: 0.7 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Voltar uma conta"
+                >
+                  <ThemedText style={styles.flowButtonLabel}>Voltar conta</ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={markNextBead}
+                  disabled={!currentBeadId}
+                  style={({ pressed }) => [
+                    styles.flowButton,
+                    styles.flowButtonPrimary,
+                    {
+                      borderColor,
+                      backgroundColor: `${accentColor}1A`,
+                    },
+                    !currentBeadId && styles.flowButtonDisabled,
+                    pressed && currentBeadId && { opacity: 0.7 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Avançar para a próxima conta"
+                >
+                  <ThemedText style={[styles.flowButtonLabel, styles.flowButtonLabelPrimary]}>
+                    Avançar conta
+                  </ThemedText>
+                </Pressable>
+              </View>
+              {currentBeadInfo ? (
+                <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
+                  Próxima oração: {currentBeadInfo.label} ({currentBeadInfo.sectionTitle})
+                </ThemedText>
+              ) : (
+                <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
+                  Todas as contas deste terço foram marcadas.
+                </ThemedText>
+              )}
+              {allBeadsMarked ? (
+                <Pressable
+                  onPress={completeCurrentRound}
+                  style={({ pressed }) => [
+                    styles.completeRoundButton,
+                    { backgroundColor: accentColor },
+                    pressed && { opacity: 0.8 },
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <ThemedText style={styles.completeRoundLabel}>
+                    Registrar terço concluído
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+          <Pressable
             onPress={openFocusMode}
             style={({ pressed }) => [
               styles.focusModeButton,
@@ -419,69 +534,6 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
               Modo dezena a dezena
             </ThemedText>
           </Pressable>
-          <View style={styles.flowControls}>
-            <Pressable
-              onPress={undoLastBead}
-              disabled={!previousMarkedBeadId}
-              style={({ pressed }) => [
-                styles.flowButton,
-                {
-                  borderColor,
-                  backgroundColor: markerIdleColor,
-                },
-                !previousMarkedBeadId && styles.flowButtonDisabled,
-                pressed && previousMarkedBeadId && { opacity: 0.7 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Voltar uma conta"
-            >
-              <ThemedText style={styles.flowButtonLabel}>Voltar conta</ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={markNextBead}
-              disabled={!currentBeadId}
-              style={({ pressed }) => [
-                styles.flowButton,
-                styles.flowButtonPrimary,
-                {
-                  borderColor,
-                  backgroundColor: `${accentColor}1A`,
-                },
-                !currentBeadId && styles.flowButtonDisabled,
-                pressed && currentBeadId && { opacity: 0.7 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Avançar para a próxima conta"
-            >
-              <ThemedText style={[styles.flowButtonLabel, styles.flowButtonLabelPrimary]}>
-                Avançar conta
-              </ThemedText>
-            </Pressable>
-          </View>
-          {currentBeadInfo ? (
-            <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
-              Próxima oração: {currentBeadInfo.label} ({currentBeadInfo.sectionTitle})
-            </ThemedText>
-          ) : (
-            <ThemedText style={[styles.currentBeadHelper, { color: mutedText }]}>
-              Todas as contas deste terço foram marcadas.
-            </ThemedText>
-          )}
-          {allBeadsMarked ? (
-            <Pressable
-              onPress={completeCurrentRound}
-              style={({ pressed }) => [
-                styles.completeRoundButton,
-                { backgroundColor: accentColor },
-                pressed && { opacity: 0.8 },
-              ]}
-              accessibilityRole="button"
-            >
-              <ThemedText style={styles.completeRoundLabel}>
-                Registrar terço concluído
-              </ThemedText>
-            </Pressable>
-          ) : null}
         </View>
       </View>
 
@@ -730,6 +782,22 @@ const styles = StyleSheet.create({
   },
   flowSection: {
     marginTop: 12,
+    gap: 12,
+  },
+  countModeToggle: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  countModeToggleLabel: {
+    fontFamily: Fonts.mono,
+    fontWeight: '600',
+  },
+  countModeContent: {
     gap: 12,
   },
   focusModeButton: {
