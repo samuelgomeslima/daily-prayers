@@ -120,29 +120,29 @@ export default function PrayersScreen() {
               >
                 {prayer.title}
               </ThemedText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Ver a oração ${prayer.title}`}
-                onPress={() => setSelectedPrayer(prayer)}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <IconSymbol
-                  name="info.circle.fill"
-                  size={24}
-                  color={palette.tint}
-                />
-              </Pressable>
             </View>
             <ThemedText
               style={styles.prayerHint}
               lightColor={`${Colors.light.text}99`}
               darkColor={`${Colors.dark.text}99`}
             >
-              Toque no ícone para ler em português e em latim.
+              Toque em "Visualizar oração" para ler em português e em latim.
             </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Visualizar a oração ${prayer.title}`}
+              onPress={() => setSelectedPrayer(prayer)}
+              style={({ pressed }) => [
+                styles.viewPrayerButton,
+                pressed && styles.viewPrayerButtonPressed,
+              ]}
+            >
+              <ThemedText
+                style={[styles.viewPrayerText, { color: palette.tint }]}
+              >
+                Visualizar oração
+              </ThemedText>
+            </Pressable>
             <View style={styles.languageTags}>
               <ThemedView
                 style={styles.languageChip}
@@ -315,6 +315,19 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 20,
     fontFamily: Fonts.serif,
+  },
+  viewPrayerButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  viewPrayerButtonPressed: {
+    opacity: 0.7,
+  },
+  viewPrayerText: {
+    fontSize: 15,
+    fontFamily: Fonts.rounded,
   },
   iconButton: {
     padding: 8,
