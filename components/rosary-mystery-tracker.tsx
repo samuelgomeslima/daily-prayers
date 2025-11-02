@@ -207,103 +207,95 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
         })}
       </View>
 
-      <ThemedView
-        style={[
-          styles.card,
-          { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}14` },
-          currentSet.id === todaySetId && {
-            borderColor: `${accentColor}AA`,
-            backgroundColor: `${accentColor}10`,
-            shadowColor: `${accentColor}26`,
-          },
-        ]}
-        lightColor={Colors.light.surface}
-        darkColor={Colors.dark.surface}
-      >
-        {currentSet.id === todaySetId && (
-          <ThemedView
-            style={[
-              styles.todayBanner,
-              { backgroundColor: `${accentColor}1F`, borderColor: `${accentColor}33` },
-            ]}
-          >
-            <ThemedText
-              type="defaultSemiBold"
-              style={[styles.todayBannerText, { color: accentColor }]}
+      {isExpanded && (
+        <ThemedView
+          style={[
+            styles.card,
+            { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}14` },
+            currentSet.id === todaySetId && {
+              borderColor: `${accentColor}AA`,
+              backgroundColor: `${accentColor}10`,
+              shadowColor: `${accentColor}26`,
+            },
+          ]}
+          lightColor={Colors.light.surface}
+          darkColor={Colors.dark.surface}
+        >
+          {currentSet.id === todaySetId && (
+            <ThemedView
+              style={[
+                styles.todayBanner,
+                { backgroundColor: `${accentColor}1F`, borderColor: `${accentColor}33` },
+              ]}
             >
-              Mistérios indicados para hoje
-            </ThemedText>
-          </ThemedView>
-        )}
-        <ThemedText type="subtitle" style={[styles.cardTitle, { fontFamily: Fonts.serif }]}>
-          {currentSet.title}
-        </ThemedText>
-        <ThemedText style={[styles.cardDays, { color: mutedText }]}>{currentSet.days}</ThemedText>
-
-        {isExpanded ? (
-          <>
-            <View style={styles.cardHeaderRow}>
-              <ThemedText style={[styles.progressLabel, { color: mutedText }]}>
-                Mistérios concluídos: {completedCount} / {currentSet.mysteries.length}
-              </ThemedText>
-              <Pressable
-                onPress={resetSetProgress}
-                style={({ pressed }) => [
-                  styles.resetButton,
-                  { backgroundColor: `${accentColor}14` },
-                  pressed && { opacity: 0.6 },
-                ]}
-                accessibilityRole="button"
+              <ThemedText
+                type="defaultSemiBold"
+                style={[styles.todayBannerText, { color: accentColor }]}
               >
-                <ThemedText
-                  type="defaultSemiBold"
-                  style={[styles.resetLabel, { color: accentColor }]}
-                >
-                  Reiniciar
-                </ThemedText>
-              </Pressable>
-            </View>
+                Mistérios indicados para hoje
+              </ThemedText>
+            </ThemedView>
+          )}
+          <ThemedText type="subtitle" style={[styles.cardTitle, { fontFamily: Fonts.serif }]}>
+            {currentSet.title}
+          </ThemedText>
+          <ThemedText style={[styles.cardDays, { color: mutedText }]}>{currentSet.days}</ThemedText>
 
-            <View style={styles.mysteryList}>
-              {currentSet.mysteries.map((mystery, index) => {
-                const key = `${currentSet.id}-${index}`;
-                const isChecked = completedMysteries.has(key);
-                return (
-                  <Pressable
-                    key={key}
-                    onPress={() => toggleMystery(index)}
-                    style={({ pressed }) => [
-                      styles.mysteryItem,
-                      {
-                        backgroundColor: surfaceMuted,
-                        borderColor,
-                      },
-                      pressed && { opacity: 0.7 },
-                    ]}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isChecked }}
-                  >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        { borderColor: isChecked ? accentColor : borderColor },
-                        isChecked && { backgroundColor: accentColor },
-                      ]}
-                    />
-                    <ThemedText style={styles.mysteryLabel}>{mystery}</ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
-        ) : (
-          <View style={styles.collapsedMessage}>
-            <ThemedText style={[styles.collapsedText, { color: mutedText }]}>
-              Toque em um mistério para visualizar os detalhes e acompanhar o progresso das dezenas.
+          <View style={styles.cardHeaderRow}>
+            <ThemedText style={[styles.progressLabel, { color: mutedText }]}>
+              Mistérios concluídos: {completedCount} / {currentSet.mysteries.length}
             </ThemedText>
+            <Pressable
+              onPress={resetSetProgress}
+              style={({ pressed }) => [
+                styles.resetButton,
+                { backgroundColor: `${accentColor}14` },
+                pressed && { opacity: 0.6 },
+              ]}
+              accessibilityRole="button"
+            >
+              <ThemedText
+                type="defaultSemiBold"
+                style={[styles.resetLabel, { color: accentColor }]}
+              >
+                Reiniciar
+              </ThemedText>
+            </Pressable>
           </View>
-        )}
-      </ThemedView>
+
+          <View style={styles.mysteryList}>
+            {currentSet.mysteries.map((mystery, index) => {
+              const key = `${currentSet.id}-${index}`;
+              const isChecked = completedMysteries.has(key);
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => toggleMystery(index)}
+                  style={({ pressed }) => [
+                    styles.mysteryItem,
+                    {
+                      backgroundColor: surfaceMuted,
+                      borderColor,
+                    },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isChecked }}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: isChecked ? accentColor : borderColor },
+                      isChecked && { backgroundColor: accentColor },
+                    ]}
+                  />
+                  <ThemedText style={styles.mysteryLabel}>{mystery}</ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ThemedView>
+      )}
     </View>
   );
 }
@@ -391,14 +383,6 @@ const styles = StyleSheet.create({
   },
   mysteryList: {
     gap: 8,
-  },
-  collapsedMessage: {
-    paddingVertical: 16,
-  },
-  collapsedText: {
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'center',
   },
   mysteryItem: {
     flexDirection: 'row',
