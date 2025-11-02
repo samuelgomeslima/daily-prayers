@@ -30,6 +30,12 @@ const OPTIONS: MoreOption[] = [
     href: '/life-plan',
   },
   {
+    title: 'Nova casa',
+    description: 'Organize o orçamento da casa nova com gastos recorrentes e metas.',
+    icon: 'house.fill',
+    href: '/new-home',
+  },
+  {
     title: 'Anotações',
     description: 'Registre inspirações, intenções e lembretes espirituais.',
     icon: 'square.and.pencil',

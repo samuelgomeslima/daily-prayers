@@ -59,6 +59,10 @@ export default function RootLayout() {
             options={{ title: 'Anotações' }}
           />
           <Stack.Screen
+            name="new-home"
+            options={{ title: 'Nova casa', headerShown: false }}
+          />
+          <Stack.Screen
             name="settings"
             options={{ title: 'Configurações' }}
           />
