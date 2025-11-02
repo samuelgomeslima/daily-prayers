@@ -49,8 +49,8 @@ export default function MoreScreen() {
 
   return (
     <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
-      <HolySpiritSymbol size={160} opacity={0.15} style={styles.symbolTop} />
-      <HolySpiritSymbol size={140} opacity={0.12} style={styles.symbolBottom} />
+      <HolySpiritSymbol size={220} opacity={0.12} style={styles.symbolTop} />
+      <HolySpiritSymbol size={180} opacity={0.1} style={styles.symbolBottom} />
       <ScrollView
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -58,17 +58,59 @@ export default function MoreScreen() {
       >
         <View
           style={[
-            styles.headerCard,
+            styles.heroCard,
             {
               borderColor: `${palette.border}55`,
               backgroundColor: colorScheme === 'dark' ? Colors.dark.surfaceMuted : Colors.light.surfaceMuted,
-              shadowColor: `${palette.tint}1A`,
+              shadowColor: `${palette.tint}26`,
             },
           ]}
         >
+          <View
+            style={[
+              styles.heroAccent,
+              {
+                backgroundColor: colorScheme === 'dark' ? `${palette.tint}26` : `${palette.tint}1F`,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.heroBadge,
+              {
+                borderColor: `${palette.tint}33`,
+                backgroundColor: colorScheme === 'dark' ? `${palette.tint}1F` : `${palette.tint}14`,
+              },
+            ]}
+          >
+            <IconSymbol name="sparkles" size={16} color={palette.tint} />
+            <ThemedText style={[styles.heroBadgeText, { color: palette.tint }]}>Ferramentas pastorais</ThemedText>
+          </View>
           <ThemedText style={styles.heading}>Mais recursos</ThemedText>
           <ThemedText style={styles.subtitle}>
             Aprofunde sua experiência espiritual com ferramentas pensadas para o seu dia a dia de oração.
+          </ThemedText>
+          <View style={styles.tagList}>
+            {['Planejamento diário', 'Direção espiritual', 'Notas inspiradas'].map((tag) => (
+              <View
+                key={tag}
+                style={[
+                  styles.tag,
+                  {
+                    borderColor: `${palette.tint}35`,
+                    backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}18`,
+                  },
+                ]}
+              >
+                <ThemedText style={[styles.tagText, { color: palette.tint }]}>{tag}</ThemedText>
+              </View>
+            ))}
+          </View>
+        </View>
+        <View style={styles.sectionHeader}>
+          <ThemedText style={styles.sectionTitle}>Ferramentas em destaque</ThemedText>
+          <ThemedText style={styles.sectionSubtitle}>
+            Escolha uma área e aprofunde sua vivência espiritual com curadoria pastoral.
           </ThemedText>
         </View>
         <View style={styles.optionsContainer}>
@@ -78,29 +120,46 @@ export default function MoreScreen() {
                 style={({ pressed }) => [
                   styles.option,
                   {
-                    borderColor: `${palette.border}66`,
+                    borderColor: `${palette.border}55`,
                     backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
-                    shadowColor: `${palette.tint}1A`,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                    shadowColor: `${palette.tint}26`,
+                    transform: [{ translateY: pressed ? 2 : 0 }],
                   },
                 ]}
+                android_ripple={{ color: `${palette.tint}1A` }}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    {
-                      backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}15`,
-                      borderColor: `${palette.tint}30`,
-                    },
-                  ]}
-                >
-                  <IconSymbol name={option.icon} size={24} color={palette.tint} />
+                <View style={styles.optionHeader}>
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      {
+                        backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}18`,
+                        borderColor: `${palette.tint}35`,
+                      },
+                    ]}
+                  >
+                    <IconSymbol name={option.icon} size={24} color={palette.tint} />
+                  </View>
+                  <IconSymbol name="chevron.right" size={20} color={palette.icon} />
                 </View>
                 <View style={styles.textContainer}>
                   <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
                   <ThemedText style={styles.optionDescription}>{option.description}</ThemedText>
+                  <View style={styles.optionFooter}>
+                    <View
+                      style={[
+                        styles.linkPill,
+                        {
+                          borderColor: `${palette.tint}33`,
+                          backgroundColor: colorScheme === 'dark' ? `${palette.tint}20` : `${palette.tint}15`,
+                        },
+                      ]}
+                    >
+                      <IconSymbol name="arrow.up.right" size={14} color={palette.tint} />
+                      <ThemedText style={[styles.linkPillText, { color: palette.tint }]}>Abrir recurso</ThemedText>
+                    </View>
+                  </View>
                 </View>
-                <IconSymbol name="chevron.right" size={20} color={palette.icon} />
               </Pressable>
             </Link>
           ))}
@@ -118,75 +177,148 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingTop: 32,
+    paddingBottom: 56,
   },
   symbolTop: {
     position: 'absolute',
-    top: -40,
-    right: -30,
+    top: -70,
+    right: -60,
   },
   symbolBottom: {
     position: 'absolute',
-    bottom: -50,
-    left: -20,
-    transform: [{ scaleX: -1 }],
+    bottom: -80,
+    left: -60,
+    transform: [{ scaleX: -1 }, { rotate: '-6deg' }],
   },
-  headerCard: {
-    padding: 20,
-    borderRadius: 20,
+  heroCard: {
+    padding: 24,
+    borderRadius: 24,
     borderWidth: 1,
+    overflow: 'hidden',
+    gap: 16,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.2,
+    shadowRadius: 36,
+    elevation: 6,
+  },
+  heroAccent: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
+    borderRadius: 24,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 8,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  heroBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   heading: {
-    fontSize: 24,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
-    opacity: 0.82,
+    opacity: 0.85,
+  },
+  tagList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  tagText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  sectionHeader: {
+    marginTop: 32,
+    gap: 6,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.7,
   },
   optionsContainer: {
-    gap: 16,
-    marginTop: 16,
+    gap: 18,
+    marginTop: 20,
   },
   option: {
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 16,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    elevation: 5,
+  },
+  optionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 18,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 3,
+    justifyContent: 'space-between',
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
   textContainer: {
     flex: 1,
-    gap: 4,
+    gap: 10,
   },
   optionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   optionDescription: {
     fontSize: 14,
-    opacity: 0.75,
+    lineHeight: 20,
+    opacity: 0.78,
+  },
+  optionFooter: {
+    flexDirection: 'row',
+  },
+  linkPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  linkPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
