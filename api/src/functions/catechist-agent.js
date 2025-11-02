@@ -26,7 +26,7 @@ const DEFAULT_MODEL = (() => {
   return 'gpt-4o-mini';
 })();
 
-const DEFAULT_MAX_TOKENS = 4096;
+const DEFAULT_MAX_TOKENS = 8192;
 
 const resolveMaxTokens = () => {
   const configured = process.env.OPENAI_CATECHIST_MAX_TOKENS;
