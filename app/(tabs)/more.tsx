@@ -94,18 +94,6 @@ export default function MoreScreen() {
                     {option.description}
                   </ThemedText>
                 </View>
-                <View
-                  style={[
-                    styles.linkPill,
-                    {
-                      borderColor: `${palette.tint}33`,
-                      backgroundColor: colorScheme === 'dark' ? `${palette.tint}20` : `${palette.tint}15`,
-                    },
-                  ]}
-                >
-                  <IconSymbol name="arrow.up.right" size={14} color={palette.tint} />
-                  <ThemedText style={[styles.linkPillText, { color: palette.tint }]}>Abrir recurso</ThemedText>
-                </View>
               </Pressable>
             </Link>
           ))}
@@ -187,20 +175,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     opacity: 0.75,
-  },
-  linkPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignSelf: 'center',
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  linkPillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.2,
   },
 });
