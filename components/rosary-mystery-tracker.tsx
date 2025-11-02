@@ -65,23 +65,26 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
   const todaySetId = useMemo(() => getTodaySetId(sets), [sets]);
   const defaultSetId = todaySetId || sets[0]?.id || '';
   const [selectedSetId, setSelectedSetId] = useState(defaultSetId);
+  const [expandedSetId, setExpandedSetId] = useState<string | null>(null);
   const [completedMysteries, setCompletedMysteries] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setSelectedSetId((current) => {
+      let nextId = current;
+
       if (todaySetId && current !== todaySetId) {
-        return todaySetId;
+        nextId = todaySetId;
+      } else if (!current && defaultSetId) {
+        nextId = defaultSetId;
+      } else if (!sets.some((set) => set.id === current)) {
+        nextId = todaySetId || defaultSetId;
       }
 
-      if (!current && defaultSetId) {
-        return defaultSetId;
+      if (nextId !== current) {
+        setExpandedSetId(null);
       }
 
-      if (!sets.some((set) => set.id === current)) {
-        return todaySetId || defaultSetId;
-      }
-
-      return current;
+      return nextId;
     });
   }, [todaySetId, defaultSetId, sets]);
 
@@ -105,6 +108,20 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
   if (!currentSet) {
     return null;
   }
+
+  const isExpanded = expandedSetId === currentSet.id;
+
+  const handleSetPress = (setId: string) => {
+    setSelectedSetId((current) => {
+      if (current === setId) {
+        setExpandedSetId((expanded) => (expanded === setId ? null : setId));
+        return current;
+      }
+
+      setExpandedSetId(setId);
+      return setId;
+    });
+  };
 
   const toggleMystery = (index: number) => {
     const key = `${currentSet.id}-${index}`;
@@ -139,10 +156,11 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
         {sets.map((set) => {
           const isSelected = set.id === currentSet.id;
           const isTodaySet = set.id === todaySetId;
+          const isSetExpanded = expandedSetId === set.id;
           return (
             <Pressable
               key={set.id}
-              onPress={() => setSelectedSetId(set.id)}
+              onPress={() => handleSetPress(set.id)}
               style={({ pressed }) => [
                 styles.tabButton,
                 {
@@ -156,7 +174,7 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
                 pressed && { opacity: 0.7 },
               ]}
               accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
+              accessibilityState={{ selected: isSelected, expanded: isSetExpanded }}
             >
               <View style={styles.tabLabelWrapper}>
                 <ThemedText
@@ -222,56 +240,69 @@ export function RosaryMysteryTracker({ sets }: RosaryMysteryTrackerProps) {
         </ThemedText>
         <ThemedText style={[styles.cardDays, { color: mutedText }]}>{currentSet.days}</ThemedText>
 
-        <View style={styles.cardHeaderRow}>
-          <ThemedText style={[styles.progressLabel, { color: mutedText }] }>
-            Mistérios concluídos: {completedCount} / {currentSet.mysteries.length}
-          </ThemedText>
-          <Pressable
-            onPress={resetSetProgress}
-            style={({ pressed }) => [
-              styles.resetButton,
-              { backgroundColor: `${accentColor}14` },
-              pressed && { opacity: 0.6 },
-            ]}
-            accessibilityRole="button"
-          >
-            <ThemedText type="defaultSemiBold" style={[styles.resetLabel, { color: accentColor }]}>
-              Reiniciar
-            </ThemedText>
-          </Pressable>
-        </View>
-
-        <View style={styles.mysteryList}>
-          {currentSet.mysteries.map((mystery, index) => {
-            const key = `${currentSet.id}-${index}`;
-            const isChecked = completedMysteries.has(key);
-            return (
+        {isExpanded ? (
+          <>
+            <View style={styles.cardHeaderRow}>
+              <ThemedText style={[styles.progressLabel, { color: mutedText }]}>
+                Mistérios concluídos: {completedCount} / {currentSet.mysteries.length}
+              </ThemedText>
               <Pressable
-                key={key}
-                onPress={() => toggleMystery(index)}
+                onPress={resetSetProgress}
                 style={({ pressed }) => [
-                  styles.mysteryItem,
-                  {
-                    backgroundColor: surfaceMuted,
-                    borderColor,
-                  },
-                  pressed && { opacity: 0.7 },
+                  styles.resetButton,
+                  { backgroundColor: `${accentColor}14` },
+                  pressed && { opacity: 0.6 },
                 ]}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isChecked }}
+                accessibilityRole="button"
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    { borderColor: isChecked ? accentColor : borderColor },
-                    isChecked && { backgroundColor: accentColor },
-                  ]}
-                />
-                <ThemedText style={styles.mysteryLabel}>{mystery}</ThemedText>
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={[styles.resetLabel, { color: accentColor }]}
+                >
+                  Reiniciar
+                </ThemedText>
               </Pressable>
-            );
-          })}
-        </View>
+            </View>
+
+            <View style={styles.mysteryList}>
+              {currentSet.mysteries.map((mystery, index) => {
+                const key = `${currentSet.id}-${index}`;
+                const isChecked = completedMysteries.has(key);
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => toggleMystery(index)}
+                    style={({ pressed }) => [
+                      styles.mysteryItem,
+                      {
+                        backgroundColor: surfaceMuted,
+                        borderColor,
+                      },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isChecked }}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        { borderColor: isChecked ? accentColor : borderColor },
+                        isChecked && { backgroundColor: accentColor },
+                      ]}
+                    />
+                    <ThemedText style={styles.mysteryLabel}>{mystery}</ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : (
+          <View style={styles.collapsedMessage}>
+            <ThemedText style={[styles.collapsedText, { color: mutedText }]}>
+              Toque em um mistério para visualizar os detalhes e acompanhar o progresso das dezenas.
+            </ThemedText>
+          </View>
+        )}
       </ThemedView>
     </View>
   );
@@ -360,6 +391,14 @@ const styles = StyleSheet.create({
   },
   mysteryList: {
     gap: 8,
+  },
+  collapsedMessage: {
+    paddingVertical: 16,
+  },
+  collapsedText: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   mysteryItem: {
     flexDirection: 'row',
