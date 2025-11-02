@@ -28,6 +28,7 @@ const MAPPING = {
   'info.circle.fill': 'info',
   'xmark.circle.fill': 'close',
   sparkles: 'auto-fix-high',
+  'arrow.up.right': 'arrow-outward',
   'chevron.up.circle.fill': 'arrow-circle-up',
   'chevron.down.circle': 'arrow-circle-down',
 } as IconMapping;
