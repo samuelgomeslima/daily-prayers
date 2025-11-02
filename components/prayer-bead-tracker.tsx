@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -53,7 +53,6 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   const [markedBeads, setMarkedBeads] = useState<Set<string>>(new Set());
   const [roundsCompleted, setRoundsCompleted] = useState(0);
   const [targetRounds, setTargetRounds] = useState(1);
-  const [focusSectionIndex, setFocusSectionIndex] = useState<number | null>(null);
 
   const beadOrder = useMemo(
     () => sequence.sections.flatMap((section) => section.beads.map((bead) => bead.id)),
@@ -99,18 +98,6 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   const minimumTarget = Math.max(1, roundsCompleted + 1);
   const currentRoundNumber = roundsCompleted + 1;
   const goalReached = roundsCompleted >= targetRounds;
-  const isFocusModeActive = focusSectionIndex !== null;
-  const focusSection =
-    focusSectionIndex !== null ? sequence.sections[focusSectionIndex] ?? null : null;
-  const focusSectionBeads = focusSection?.beads ?? [];
-  const focusSectionMarked = focusSectionBeads.filter((bead) => markedBeads.has(bead.id));
-  const focusSectionCompleted =
-    focusSectionBeads.length > 0 && focusSectionMarked.length === focusSectionBeads.length;
-  const focusSectionCurrentBead = focusSectionBeads.find((bead) => !markedBeads.has(bead.id));
-  const focusSectionTitle = focusSection?.title?.toLowerCase() ?? '';
-  const focusNextButtonLabel = focusSectionTitle.includes('dezena')
-    ? 'Ir para a próxima dezena'
-    : 'Ir para a próxima etapa';
 
   const toggleBead = (beadId: string) => {
     setMarkedBeads((current) => {
@@ -180,149 +167,12 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
     });
   };
 
-  const openFocusMode = () => {
-    if (currentBeadId) {
-      const nextSectionIndex = beadMetadata.get(currentBeadId)?.sectionIndex ?? 0;
-      setFocusSectionIndex(nextSectionIndex);
-      return;
-    }
-
-    setFocusSectionIndex(Math.max(0, sequence.sections.length - 1));
-  };
-
-  const closeFocusMode = () => {
-    setFocusSectionIndex(null);
-  };
-
-  const goToNextFocusSection = () => {
-    if (focusSectionIndex === null) {
-      return;
-    }
-
-    const nextIndex = sequence.sections.findIndex((section, index) => {
-      if (index <= focusSectionIndex) {
-        return false;
-      }
-
-      return section.beads.some((bead) => !markedBeads.has(bead.id));
-    });
-
-    if (nextIndex === -1) {
-      closeFocusMode();
-      return;
-    }
-
-    setFocusSectionIndex(nextIndex);
-  };
-
   return (
     <ThemedView
       style={[styles.container, { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}1F` }]}
       lightColor={Colors.light.surface}
       darkColor={Colors.dark.surface}
     >
-      <Modal
-        visible={isFocusModeActive}
-        transparent
-        animationType="slide"
-        onRequestClose={closeFocusMode}
-      >
-        <View style={styles.focusOverlay}>
-          <ThemedView
-            style={[
-              styles.focusContainer,
-              { borderColor: `${borderColor}66`, shadowColor: `${palette.tint}26` },
-            ]}
-            lightColor={Colors.light.surface}
-            darkColor={Colors.dark.surface}
-          >
-            {focusSection ? (
-              <>
-                <View style={styles.focusHeader}>
-                  <ThemedText type="subtitle" style={[styles.focusTitle, { fontFamily: Fonts.serif }]}>
-                    {focusSection.title}
-                  </ThemedText>
-                  <Pressable
-                    onPress={closeFocusMode}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.focusCloseButton, pressed && { opacity: 0.6 }]}
-                  >
-                    <ThemedText style={[styles.focusCloseLabel, { color: accentColor }]}>Fechar</ThemedText>
-                  </Pressable>
-                </View>
-                {focusSection.description ? (
-                  <ThemedText style={[styles.focusDescription, { color: mutedText }]}>
-                    {focusSection.description}
-                  </ThemedText>
-                ) : null}
-                <ThemedText style={[styles.focusProgress, { color: mutedText }]}>
-                  {focusSectionMarked.length} / {focusSectionBeads.length} contas desta etapa
-                </ThemedText>
-                {focusSectionCurrentBead ? (
-                  <ThemedText style={styles.focusCurrentBead}>
-                    Próxima oração: {focusSectionCurrentBead.label}
-                  </ThemedText>
-                ) : (
-                  <ThemedText style={styles.focusCurrentBead}>
-                    Esta dezena foi concluída.
-                  </ThemedText>
-                )}
-                <View style={styles.focusFlowControls}>
-                  <Pressable
-                    onPress={undoLastBead}
-                    disabled={!previousMarkedBeadId}
-                    style={({ pressed }) => [
-                      styles.focusFlowButton,
-                      { borderColor, backgroundColor: markerIdleColor },
-                      !previousMarkedBeadId && styles.focusFlowButtonDisabled,
-                      pressed && previousMarkedBeadId && { opacity: 0.7 },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Voltar uma conta"
-                  >
-                    <ThemedText style={styles.focusFlowButtonLabel}>Voltar conta</ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={markNextBead}
-                    disabled={!currentBeadId}
-                    style={({ pressed }) => [
-                      styles.focusFlowButton,
-                      styles.focusFlowButtonPrimary,
-                      { borderColor, backgroundColor: `${accentColor}1A` },
-                      !currentBeadId && styles.focusFlowButtonDisabled,
-                      pressed && currentBeadId && { opacity: 0.7 },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Avançar para a próxima conta"
-                  >
-                    <ThemedText
-                      style={[styles.focusFlowButtonLabel, styles.focusFlowButtonLabelPrimary]}
-                    >
-                      Avançar conta
-                    </ThemedText>
-                  </Pressable>
-                </View>
-                {focusSectionCompleted ? (
-                  <Pressable
-                    onPress={goToNextFocusSection}
-                    style={({ pressed }) => [
-                      styles.focusNextSectionButton,
-                      { backgroundColor: accentColor },
-                      pressed && { opacity: 0.85 },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={focusNextButtonLabel}
-                  >
-                    <ThemedText style={styles.focusNextSectionLabel}>
-                      {focusNextButtonLabel}
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-              </>
-            ) : null}
-          </ThemedView>
-        </View>
-      </Modal>
       <View style={styles.header}>
         <ThemedText type="subtitle" style={[styles.title, { fontFamily: Fonts.serif }] }>
           {sequence.name}
@@ -405,20 +255,6 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
           </Pressable>
         </View>
         <View style={styles.flowSection}>
-          <Pressable
-            onPress={openFocusMode}
-            style={({ pressed }) => [
-              styles.focusModeButton,
-              { borderColor, backgroundColor: `${accentColor}12` },
-              pressed && { opacity: 0.8 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Iniciar modo focado na dezena atual"
-          >
-            <ThemedText style={[styles.focusModeButtonLabel, { color: accentColor }]}>
-              Modo dezena a dezena
-            </ThemedText>
-          </Pressable>
           <View style={styles.flowControls}>
             <Pressable
               onPress={undoLastBead}
@@ -560,80 +396,6 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  focusOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: 'rgba(16, 20, 40, 0.65)',
-  },
-  focusContainer: {
-    borderRadius: 20,
-    padding: 24,
-    gap: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 8,
-  },
-  focusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  focusTitle: {
-    fontSize: 20,
-  },
-  focusCloseButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  focusCloseLabel: {
-    fontWeight: '600',
-  },
-  focusDescription: {
-    lineHeight: 20,
-  },
-  focusProgress: {
-    fontFamily: Fonts.mono,
-  },
-  focusCurrentBead: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  focusFlowControls: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  focusFlowButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  focusFlowButtonPrimary: {},
-  focusFlowButtonDisabled: {
-    opacity: 0.4,
-  },
-  focusFlowButtonLabel: {
-    fontFamily: Fonts.mono,
-  },
-  focusFlowButtonLabelPrimary: {
-    fontWeight: '600',
-  },
-  focusNextSectionButton: {
-    marginTop: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  focusNextSectionLabel: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
   header: {
     gap: 8,
   },
@@ -731,17 +493,6 @@ const styles = StyleSheet.create({
   flowSection: {
     marginTop: 12,
     gap: 12,
-  },
-  focusModeButton: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  focusModeButtonLabel: {
-    fontFamily: Fonts.mono,
-    fontWeight: '600',
   },
   flowButton: {
     flex: 1,
