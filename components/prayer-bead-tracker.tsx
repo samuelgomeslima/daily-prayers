@@ -345,7 +345,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                       styles.beadItem,
                       {
                         borderColor: isCurrent ? accentColor : `${borderColor}55`,
-                        backgroundColor: isMarked ? `${accentColor}22` : `${overlayColor}14`,
+                        backgroundColor: isMarked ? `${accentColor}22` : overlayColor,
                       },
                       pressed && { opacity: 0.7 },
                     ]}
