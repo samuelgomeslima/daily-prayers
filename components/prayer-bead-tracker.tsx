@@ -332,7 +332,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                 {section.description}
               </ThemedText>
             ) : null}
-            <View style={styles.beadRow}>
+            <View style={styles.beadList}>
               {section.beads.map((bead) => {
                 const isMarked = markedBeads.has(bead.id);
                 const isCurrent = currentBeadId === bead.id;
@@ -342,38 +342,43 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                     key={bead.id}
                     onPress={() => toggleBead(bead.id)}
                     style={({ pressed }) => [
-                      styles.bead,
-                      bead.type === 'small' && styles.smallBead,
-                      bead.type === 'large' && styles.largeBead,
-                      bead.type === 'marker' && styles.markerBead,
+                      styles.beadItem,
                       {
-                        borderColor: isMarked ? accentColor : iconColor,
-                        backgroundColor: isMarked
-                          ? accentColor
-                          : bead.type === 'marker'
-                            ? markerIdleColor
-                            : surfaceColor,
-                        opacity: isCurrent || isMarked ? 1 : 0.55,
+                        borderColor: isCurrent ? accentColor : `${borderColor}55`,
+                        backgroundColor: isMarked ? `${accentColor}22` : `${overlayColor}14`,
                       },
-                      isCurrent && styles.currentBead,
                       pressed && { opacity: 0.7 },
                     ]}
                     accessibilityLabel={bead.label}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: isMarked }}
-                  />
+                  >
+                    <ThemedText
+                      style={[styles.beadItemLabel, { color: textColor }]}
+                      numberOfLines={2}>
+                      {bead.label}
+                    </ThemedText>
+                    <View
+                      style={[
+                        styles.beadIndicator,
+                        bead.type === 'small' && styles.smallBead,
+                        bead.type === 'large' && styles.largeBead,
+                        bead.type === 'marker' && styles.markerBead,
+                        {
+                          borderColor: isMarked ? accentColor : iconColor,
+                          backgroundColor: isMarked
+                            ? accentColor
+                            : bead.type === 'marker'
+                              ? markerIdleColor
+                              : surfaceColor,
+                          opacity: isCurrent || isMarked ? 1 : 0.55,
+                        },
+                        isCurrent && styles.currentBeadIndicator,
+                      ]}
+                    />
+                  </Pressable>
                 );
               })}
-            </View>
-            <View style={styles.beadLabels}>
-              {section.beads.map((bead) => (
-                <ThemedText
-                  key={`${bead.id}-label`}
-                  style={[styles.beadLabel, { color: textColor }]}
-                  numberOfLines={1}>
-                  {bead.label}
-                </ThemedText>
-              ))}
             </View>
           </View>
         ))}
@@ -537,12 +542,24 @@ const styles = StyleSheet.create({
   sectionDescription: {
     lineHeight: 20,
   },
-  beadRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  beadList: {
     gap: 10,
   },
-  bead: {
+  beadItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  beadItemLabel: {
+    flex: 1,
+    marginRight: 12,
+    fontSize: 14,
+  },
+  beadIndicator: {
     borderWidth: 2,
     borderRadius: 999,
     width: 28,
@@ -560,17 +577,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
   },
-  currentBead: {
+  currentBeadIndicator: {
     transform: [{ scale: 1.1 }],
     borderWidth: 2,
-  },
-  beadLabels: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  beadLabel: {
-    fontSize: 12,
-    maxWidth: 70,
   },
 });
