@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "OPENAI_API_KEY": "",
+    "OPENAI_CHAT_MODEL": "gpt-4o-mini",
+    "OPENAI_CATECHIST_AGENT_ID": "",
+    "OPENAI_CATECHIST_MODEL": "gpt-4o-mini",
+    "OPENAI_CATECHIST_MAX_TOKENS": "8192",
+    "FILE_SEARCH_TOOL": "",
+    "OPENAI_TRANSCRIBE_MODEL": "gpt-4o-mini-transcribe",
+    "OPENAI_PROXY_TOKEN": ""
+  }
+}
