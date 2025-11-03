@@ -20,16 +20,36 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-3. Configure the chat proxy endpoint
+3. Configure environment variables
 
-   Copy the example environment file and update `EXPO_PUBLIC_CHAT_BASE_URL` with the full URL of your deployed Static Web App (e.g. `https://white-ground-0a882961e.1.azurestaticapps.net/`).
+   Copy the example environment file and fill in the Expo variables required by the client app.
 
    ```bash
    cp .env.example .env
-   # then edit .env and set EXPO_PUBLIC_CHAT_BASE_URL
    ```
 
-   > [!TIP] > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
+   - `EXPO_PUBLIC_CHAT_BASE_URL` (**required**) – full URL of your deployed Static Web App (e.g. `https://white-ground-0a882961e.1.azurestaticapps.net/`).
+   - `EXPO_PUBLIC_API_BASE_URL` (optional) – fallback base URL if the chat URL is not defined.
+   - `EXPO_PUBLIC_SITE_URL` (optional) – secondary fallback used in development builds.
+   - `EXPO_PUBLIC_CATECHIST_BASE_URL` (optional) – dedicated endpoint for the catechist agent; defaults to the chat base URL when omitted.
+
+   If you plan to run the Azure Functions locally, copy the API template and provide the required credentials.
+
+   ```bash
+   cp api/local.settings.example.json api/local.settings.json
+   ```
+
+   - `OPENAI_API_KEY` (**required**) – server-side key used by every OpenAI call.
+   - `OPENAI_CHAT_MODEL` (optional) – defaults to `gpt-4o-mini`.
+   - `OPENAI_CATECHIST_AGENT_ID` (**required for the catechist assistant**) – ID of the workflow created in OpenAI.
+   - `OPENAI_CATECHIST_MODEL` (optional) – defaults to `gpt-4o-mini`.
+   - `OPENAI_CATECHIST_MAX_TOKENS` (optional) – defaults to `8192`.
+   - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
+   - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
+   - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+
+   > [!TIP]
+   > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
 
 4. Start the app
 
