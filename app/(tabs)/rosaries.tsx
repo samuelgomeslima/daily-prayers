@@ -270,7 +270,7 @@ const immaculateHeartSequence: PrayerSequence = {
 
 const byzantineSequence: PrayerSequence = {
   id: 'byzantine-chaplet',
-  name: 'Terço Bizantino (Cicotki)',
+  name: 'Terço Bizantino (Chotki)',
   description:
     'Percorra a corda de oração com a Oração de Jesus, marcando cada invocação compassada.',
   sections: [
