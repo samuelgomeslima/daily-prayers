@@ -337,7 +337,18 @@ export default function NotesScreen() {
         </Pressable>
       );
     },
-    [accentColor, editingNoteId, handleDeleteNote, handleSelectNote, mutedText],
+    [
+      accentColor,
+      borderColor,
+      colorScheme,
+      editingNoteId,
+      handleDeleteNote,
+      handleSelectNote,
+      mutedText,
+      overlayColor,
+      palette,
+      surface,
+    ],
   );
 
   return (
