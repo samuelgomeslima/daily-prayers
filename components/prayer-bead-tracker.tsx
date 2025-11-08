@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Colors, Fonts } from '@/constants/theme';
@@ -29,11 +29,19 @@ type PrayerSequence = {
   sections: PrayerSection[];
 };
 
-type PrayerBeadTrackerProps = {
-  sequence: PrayerSequence;
+type PrayerBeadTrackerState = {
+  markedIds: string[];
+  roundsCompleted: number;
+  targetRounds: number;
 };
 
-export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
+type PrayerBeadTrackerProps = {
+  sequence: PrayerSequence;
+  initialState?: PrayerBeadTrackerState;
+  onStateChange?: (state: PrayerBeadTrackerState) => void;
+};
+
+export function PrayerBeadTracker({ sequence, initialState, onStateChange }: PrayerBeadTrackerProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const accentColor = useThemeColor({}, 'tint');
@@ -50,9 +58,14 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
     [sequence.sections]
   );
 
-  const [markedBeads, setMarkedBeads] = useState<Set<string>>(new Set());
-  const [roundsCompleted, setRoundsCompleted] = useState(0);
-  const [targetRounds, setTargetRounds] = useState(1);
+  const initialRoundsCompleted = initialState?.roundsCompleted ?? 0;
+  const initialTargetRounds = Math.max(initialState?.targetRounds ?? 1, 1);
+
+  const [markedBeads, setMarkedBeads] = useState<Set<string>>(
+    () => new Set(initialState?.markedIds ?? [])
+  );
+  const [roundsCompleted, setRoundsCompleted] = useState(initialRoundsCompleted);
+  const [targetRounds, setTargetRounds] = useState(initialTargetRounds);
 
   const beadOrder = useMemo(
     () => sequence.sections.flatMap((section) => section.beads.map((bead) => bead.id)),
@@ -98,6 +111,18 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   const minimumTarget = Math.max(1, roundsCompleted + 1);
   const currentRoundNumber = roundsCompleted + 1;
   const goalReached = roundsCompleted >= targetRounds;
+
+  useEffect(() => {
+    if (!onStateChange) {
+      return;
+    }
+
+    onStateChange({
+      markedIds: Array.from(markedBeads),
+      roundsCompleted,
+      targetRounds,
+    });
+  }, [markedBeads, roundsCompleted, targetRounds, onStateChange]);
 
   const toggleBead = (beadId: string) => {
     setMarkedBeads((current) => {
@@ -361,9 +386,6 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
                     <View
                       style={[
                         styles.beadIndicator,
-                        bead.type === 'small' && styles.smallBead,
-                        bead.type === 'large' && styles.largeBead,
-                        bead.type === 'marker' && styles.markerBead,
                         {
                           borderColor: isMarked ? accentColor : iconColor,
                           backgroundColor: isMarked
@@ -387,7 +409,7 @@ export function PrayerBeadTracker({ sequence }: PrayerBeadTrackerProps) {
   );
 }
 
-export type { PrayerBead, PrayerSection, PrayerSequence };
+export type { PrayerBead, PrayerSection, PrayerSequence, PrayerBeadTrackerState };
 
 const styles = StyleSheet.create({
   container: {
@@ -564,18 +586,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     width: 28,
     height: 28,
-  },
-  smallBead: {
-    width: 22,
-    height: 22,
-  },
-  largeBead: {
-    width: 28,
-    height: 28,
-  },
-  markerBead: {
-    width: 32,
-    height: 32,
   },
   currentBeadIndicator: {
     transform: [{ scale: 1.1 }],

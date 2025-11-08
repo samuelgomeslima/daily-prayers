@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { PrayerBeadTracker, type PrayerSequence } from '@/components/prayer-bead-tracker';
+import {
+  PrayerBeadTracker,
+  type PrayerBeadTrackerState,
+  type PrayerSequence,
+} from '@/components/prayer-bead-tracker';
 import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
@@ -339,6 +343,7 @@ export default function RosariesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const [activeModalSequence, setActiveModalSequence] = useState<PrayerSequence | null>(null);
+  const [trackerStates, setTrackerStates] = useState<Record<string, PrayerBeadTrackerState>>({});
 
   const todayMysterySet = getTodayMysterySet(ROSARY_MYSTERY_SETS);
   const dailyRosarySequence = todayMysterySet
@@ -528,7 +533,19 @@ export default function RosariesScreen() {
               </Pressable>
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
-              {activeModalSequence ? <PrayerBeadTracker sequence={activeModalSequence} /> : null}
+              {activeModalSequence ? (
+                <PrayerBeadTracker
+                  key={activeModalSequence.id}
+                  sequence={activeModalSequence}
+                  initialState={trackerStates[activeModalSequence.id]}
+                  onStateChange={(state) => {
+                    setTrackerStates((current) => ({
+                      ...current,
+                      [activeModalSequence.id]: state,
+                    }));
+                  }}
+                />
+              ) : null}
             </ScrollView>
           </ThemedView>
         </View>
