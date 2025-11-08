@@ -32,6 +32,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `EXPO_PUBLIC_API_BASE_URL` (optional) – fallback base URL if the chat URL is not defined.
    - `EXPO_PUBLIC_SITE_URL` (optional) – secondary fallback used in development builds.
    - `EXPO_PUBLIC_CATECHIST_BASE_URL` (optional) – dedicated endpoint for the catechist agent; defaults to the chat base URL when omitted.
+   - `EXPO_PUBLIC_SUPABASE_URL` (**required**) – base URL of your Supabase project (Dashboard → Settings → API → Project URL).
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` (**required**) – anon/public API key used by the mobile client to authenticate with Supabase.
 
    If you plan to run the Azure Functions locally, copy the API template and provide the required credentials.
 
@@ -94,6 +96,75 @@ You can start developing by editing the files inside the **app** directory. This
 
 - Como não existe API nacional, adotamos formulários de envio no aplicativo. As entradas ficam associadas à paróquia e são revisadas antes da publicação.
 - Também oferecemos deep links para os guias oficiais da Arquidiocese de Belo Horizonte, com horários publicados em [missadiariabh.com/missadiaria](https://www.missadiariabh.com/missadiaria) e as agendas de confissões em [missadiariabh.com/confissoes](https://www.missadiariabh.com/confissoes) para complementar a busca do usuário.
+
+### Integração com Supabase
+
+1. Ative o provedor de e-mail/senha no painel do Supabase (Authentication → Providers → Email) e defina se os cadastros precisam de confirmação por e-mail.
+2. Crie as tabelas necessárias usando o editor SQL do Supabase (Database → SQL editor) executando o script abaixo. Ele habilita RLS e cria políticas básicas que garantem que cada usuário só consiga acessar os próprios registros.
+
+   ```sql
+   create extension if not exists "pgcrypto";
+
+   -- Notas pessoais
+   create table if not exists public.notes (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users (id) on delete cascade,
+     title text,
+     content text,
+     updated_at timestamptz not null default timezone('utc', now())
+   );
+   alter table public.notes enable row level security;
+   create policy "Notes are scoped per user" on public.notes
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
+   -- Plano de vida espiritual
+   create table if not exists public.life_plan_practices (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users (id) on delete cascade,
+     title text not null,
+     description text,
+     frequency text not null,
+     is_default boolean not null default false,
+     completed_periods jsonb not null default '[]'::jsonb,
+     created_at timestamptz not null default timezone('utc', now()),
+     updated_at timestamptz not null default timezone('utc', now())
+   );
+   alter table public.life_plan_practices enable row level security;
+   create policy "Life plan per user" on public.life_plan_practices
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
+   -- Histórico de conversas com a IA
+   create table if not exists public.chat_messages (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users (id) on delete cascade,
+     role text not null check (role in ('user', 'assistant')),
+     content text not null,
+     created_at timestamptz not null default timezone('utc', now())
+   );
+   alter table public.chat_messages enable row level security;
+   create policy "Chat messages per user" on public.chat_messages
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
+   -- Preferências de modelos de IA
+   create table if not exists public.model_settings (
+     user_id uuid primary key references auth.users (id) on delete cascade,
+     catechist_model text not null,
+     chat_model text not null,
+     updated_at timestamptz not null default timezone('utc', now())
+   );
+   alter table public.model_settings enable row level security;
+   create policy "Model settings per user" on public.model_settings
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+   ```
+
+3. No arquivo `.env` (ou nos segredos do ambiente CI/CD), defina `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` com os valores copiados do painel (Settings → API). O app grava a sessão autenticada no armazenamento seguro do dispositivo e renova o token automaticamente.
+4. Após atualizar as variáveis de ambiente, reinicie o Metro bundler (`npx expo start --clear`) para garantir que o bundle receba os novos valores.
+
+Com essa configuração, todas as funcionalidades — plano de vida, anotações, histórico do chat e preferências de modelos — passam a ser persistidas no Supabase e ficam disponíveis em qualquer dispositivo autenticado com o mesmo usuário.
 
 ## Get a fresh project
 

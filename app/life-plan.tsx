@@ -1,7 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,10 +16,8 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const LIFE_PLAN_STORAGE_FILE = FileSystem.documentDirectory
-  ? `${FileSystem.documentDirectory}life-plan.json`
-  : null;
+import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/lib/supabase';
 
 type PracticeFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -36,10 +33,13 @@ type LifePlanPractice = BasePractice & {
   completedPeriods: string[];
 };
 
-type LifePlanStorage = {
-  version: 1;
-  updatedAt: string;
-  practices: LifePlanPractice[];
+type SupabaseLifePlanRow = {
+  id: string;
+  title: string | null;
+  description: string | null;
+  frequency: string | null;
+  is_default: boolean | null;
+  completed_periods: string[] | null;
 };
 
 const FREQUENCIES: PracticeFrequency[] = ['daily', 'weekly', 'monthly'];
@@ -140,17 +140,17 @@ function isPracticeFrequency(value: unknown): value is PracticeFrequency {
   return value === 'daily' || value === 'weekly' || value === 'monthly';
 }
 
-function normalizePractice(practice: any): LifePlanPractice {
-  const completed = Array.isArray(practice?.completedPeriods)
-    ? practice.completedPeriods.filter((entry: unknown) => typeof entry === 'string')
+function mapSupabasePractice(row: SupabaseLifePlanRow): LifePlanPractice {
+  const completed = Array.isArray(row.completed_periods)
+    ? row.completed_periods.filter((entry): entry is string => typeof entry === 'string')
     : [];
 
   return {
-    id: typeof practice?.id === 'string' ? practice.id : `custom-${Date.now()}`,
-    title: typeof practice?.title === 'string' ? practice.title : 'Prática sem título',
-    description: typeof practice?.description === 'string' ? practice.description : undefined,
-    frequency: isPracticeFrequency(practice?.frequency) ? practice.frequency : 'daily',
-    isDefault: Boolean(practice?.isDefault),
+    id: row.id,
+    title: typeof row.title === 'string' ? row.title : 'Prática sem título',
+    description: typeof row.description === 'string' ? row.description : undefined,
+    frequency: isPracticeFrequency(row.frequency) ? row.frequency : 'daily',
+    isDefault: Boolean(row.is_default),
     completedPeriods: completed,
   };
 }
@@ -188,87 +188,55 @@ export default function LifePlanScreen() {
   const [formFrequency, setFormFrequency] = useState<PracticeFrequency>('daily');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
-
-  const persistPlanToStorage = useCallback((nextPlan: LifePlanPractice[]) => {
-    if (!LIFE_PLAN_STORAGE_FILE) {
-      return Promise.resolve();
-    }
-
-    const runSave = async () => {
-      try {
-        const payload: LifePlanStorage = {
-          version: 1,
-          updatedAt: new Date().toISOString(),
-          practices: nextPlan,
-        };
-        await FileSystem.writeAsStringAsync(LIFE_PLAN_STORAGE_FILE, JSON.stringify(payload));
-        setStorageWarning(null);
-      } catch (error) {
-        console.error('Failed to save life plan', error);
-        setStorageWarning('Não foi possível salvar as alterações localmente. Elas podem ser perdidas.');
-      }
-    };
-
-    const queuedSave = saveQueueRef.current
-      .catch(() => {
-        // Swallow errors from previous saves to keep the queue intact.
-      })
-      .then(runSave);
-
-    saveQueueRef.current = queuedSave;
-
-    return queuedSave;
-  }, []);
+  const { user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
 
+    if (!user) {
+      setPlan(createDefaultPlan());
+      setStorageWarning('Faça login para sincronizar seu plano de vida.');
+      setLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const loadPlan = async () => {
-      if (!LIFE_PLAN_STORAGE_FILE) {
-        if (isMounted) {
-          setPlan(createDefaultPlan());
-          setStorageWarning(
-            'O armazenamento local não está disponível neste dispositivo. O plano será mantido apenas durante esta sessão.',
-          );
-          setLoading(false);
-        }
-        return;
-      }
+      setLoading(true);
 
       try {
-        const info = await FileSystem.getInfoAsync(LIFE_PLAN_STORAGE_FILE);
+        const rows = await supabase.fetchLifePlan(user.id);
 
-        if (!info.exists) {
-          const defaults = createDefaultPlan();
-          if (isMounted) {
-            setPlan(defaults);
-          }
-          await persistPlanToStorage(defaults);
-        } else {
-          const content = await FileSystem.readAsStringAsync(LIFE_PLAN_STORAGE_FILE);
-          const stored: LifePlanStorage | null = content ? JSON.parse(content) : null;
-
-          if (stored?.version === 1 && Array.isArray(stored.practices)) {
-            const hydrated = stored.practices.map(normalizePractice);
-            if (isMounted) {
-              setPlan(hydrated);
-            }
-          } else {
-            const defaults = createDefaultPlan();
-            if (isMounted) {
-              setPlan(defaults);
-            }
-            await persistPlanToStorage(defaults);
-            setStorageWarning('Não foi possível carregar o plano salvo. Um novo plano foi criado.');
-          }
+        if (!isMounted) {
+          return;
         }
+
+        if (!rows.length) {
+          const inserted = await supabase.insertLifePlanPractices(
+            user.id,
+            DEFAULT_PRACTICES.map(({ title, description, frequency, isDefault }) => ({
+              title,
+              description,
+              frequency,
+              isDefault,
+            })),
+          );
+
+          const hydrated = inserted.map((row) => mapSupabasePractice(row as SupabaseLifePlanRow));
+          setPlan(hydrated);
+          setStorageWarning(null);
+          return;
+        }
+
+        const hydrated = rows.map((row) => mapSupabasePractice(row as SupabaseLifePlanRow));
+        setPlan(hydrated);
+        setStorageWarning(null);
       } catch (error) {
-        console.error('Failed to load life plan', error);
-        const defaults = createDefaultPlan();
+        console.error('Falha ao carregar o plano de vida do Supabase.', error);
         if (isMounted) {
-          setPlan(defaults);
-          setStorageWarning('Houve um erro ao carregar o plano salvo. Um novo plano padrão foi iniciado.');
+          setPlan(createDefaultPlan());
+          setStorageWarning('Não foi possível sincronizar com o Supabase. Usando plano padrão temporário.');
         }
       } finally {
         if (isMounted) {
@@ -277,23 +245,12 @@ export default function LifePlanScreen() {
       }
     };
 
-    loadPlan();
+    void loadPlan();
 
     return () => {
       isMounted = false;
     };
-  }, [persistPlanToStorage]);
-
-  const applyPlanUpdate = useCallback(
-    (updater: (current: LifePlanPractice[]) => LifePlanPractice[]) => {
-      setPlan((current) => {
-        const nextPlan = updater(current);
-        void persistPlanToStorage(nextPlan);
-        return nextPlan;
-      });
-    },
-    [persistPlanToStorage],
-  );
+  }, [user]);
 
   const isPracticeCompleted = useCallback((practice: LifePlanPractice) => {
     const periodKey = getPeriodKey(practice.frequency);
@@ -322,34 +279,67 @@ export default function LifePlanScreen() {
   }, [plan.length, completedCount]);
 
   const handleTogglePractice = useCallback(
-    (practiceId: string) => {
-      applyPlanUpdate((current) =>
-        current.map((practice) => {
-          if (practice.id !== practiceId) {
-            return practice;
-          }
+    async (practiceId: string) => {
+      if (!user) {
+        setStorageWarning('Faça login para atualizar seu plano de vida.');
+        return;
+      }
 
-          const periodKey = getPeriodKey(practice.frequency);
-          const alreadyCompleted = practice.completedPeriods.includes(periodKey);
-          const updatedPeriods = alreadyCompleted
-            ? practice.completedPeriods.filter((entry) => entry !== periodKey)
-            : [...practice.completedPeriods, periodKey];
+      const target = plan.find((practice) => practice.id === practiceId);
 
-          return {
-            ...practice,
-            completedPeriods: updatedPeriods,
-          };
-        }),
+      if (!target) {
+        return;
+      }
+
+      const periodKey = getPeriodKey(target.frequency);
+      const alreadyCompleted = target.completedPeriods.includes(periodKey);
+      const updatedPeriods = alreadyCompleted
+        ? target.completedPeriods.filter((entry) => entry !== periodKey)
+        : [...target.completedPeriods, periodKey];
+
+      const previousPlan = plan;
+      setPlan((current) =>
+        current.map((practice) =>
+          practice.id === practiceId
+            ? { ...practice, completedPeriods: updatedPeriods }
+            : practice,
+        ),
       );
+
+      try {
+        await supabase.updateLifePlanPractice(user.id, practiceId, {
+          completedPeriods: updatedPeriods,
+        });
+        setStorageWarning(null);
+      } catch (error) {
+        console.error('Não foi possível atualizar a prática no Supabase.', error);
+        setPlan(previousPlan);
+        setStorageWarning('Falha ao sincronizar com o Supabase. Tente novamente.');
+      }
     },
-    [applyPlanUpdate],
+    [plan, user],
   );
 
   const handleRemovePractice = useCallback(
-    (practiceId: string) => {
-      applyPlanUpdate((current) => current.filter((practice) => practice.id !== practiceId));
+    async (practiceId: string) => {
+      if (!user) {
+        setStorageWarning('Faça login para remover práticas.');
+        return;
+      }
+
+      const previousPlan = plan;
+      setPlan((current) => current.filter((practice) => practice.id !== practiceId));
+
+      try {
+        await supabase.deleteLifePlanPractice(user.id, practiceId);
+        setStorageWarning(null);
+      } catch (error) {
+        console.error('Não foi possível remover a prática no Supabase.', error);
+        setPlan(previousPlan);
+        setStorageWarning('Não foi possível sincronizar a remoção. Verifique sua conexão.');
+      }
     },
-    [applyPlanUpdate],
+    [plan, user],
   );
 
   const confirmRemovePractice = useCallback(
@@ -363,23 +353,39 @@ export default function LifePlanScreen() {
   );
 
   const handleResetProgress = useCallback(() => {
+    if (!user) {
+      setStorageWarning('Faça login para reiniciar o progresso.');
+      return;
+    }
+
     Alert.alert('Reiniciar progresso', 'Deseja limpar todas as marcações do período atual?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Reiniciar',
         style: 'destructive',
-        onPress: () =>
-          applyPlanUpdate((current) =>
+        onPress: async () => {
+          const previousPlan = plan;
+          setPlan((current) =>
             current.map((practice) => ({
               ...practice,
               completedPeriods: [],
             })),
-          ),
+          );
+
+          try {
+            await supabase.resetLifePlanProgress(user.id);
+            setStorageWarning(null);
+          } catch (error) {
+            console.error('Não foi possível reiniciar o progresso no Supabase.', error);
+            setPlan(previousPlan);
+            setStorageWarning('Falha ao sincronizar o reinício do plano. Tente novamente.');
+          }
+        },
       },
     ]);
-  }, [applyPlanUpdate]);
+  }, [plan, user]);
 
-  const handleAddPractice = useCallback(() => {
+  const handleAddPractice = useCallback(async () => {
     const trimmedTitle = formTitle.trim();
     const trimmedDescription = formDescription.trim();
 
@@ -388,20 +394,38 @@ export default function LifePlanScreen() {
       return;
     }
 
-    const newPractice: LifePlanPractice = {
-      id: `custom-${Date.now()}`,
-      title: trimmedTitle,
-      description: trimmedDescription ? trimmedDescription : undefined,
-      frequency: formFrequency,
-      completedPeriods: [],
-    };
+    if (!user) {
+      setFormError('Faça login para adicionar novas práticas.');
+      return;
+    }
 
-    applyPlanUpdate((current) => [...current, newPractice]);
-    setFormTitle('');
-    setFormDescription('');
-    setFormFrequency('daily');
-    setFormError(null);
-  }, [applyPlanUpdate, formDescription, formFrequency, formTitle]);
+    try {
+      const inserted = await supabase.insertLifePlanPractices(user.id, [
+        {
+          title: trimmedTitle,
+          description: trimmedDescription ? trimmedDescription : null,
+          frequency: formFrequency,
+        },
+      ]);
+
+      const created = inserted[0];
+
+      if (!created) {
+        throw new Error('Não foi possível criar a prática.');
+      }
+
+      const mapped = mapSupabasePractice(created as SupabaseLifePlanRow);
+      setPlan((current) => [...current, mapped]);
+      setFormTitle('');
+      setFormDescription('');
+      setFormFrequency('daily');
+      setFormError(null);
+      setStorageWarning(null);
+    } catch (error) {
+      console.error('Não foi possível adicionar a prática no Supabase.', error);
+      setFormError('Não foi possível salvar a prática no Supabase. Tente novamente.');
+    }
+  }, [formDescription, formFrequency, formTitle, user]);
 
   const placeholderColor = colorScheme === 'dark' ? 'rgba(244, 251, 255, 0.48)' : 'rgba(4, 48, 73, 0.45)';
   const overlayColor = colorScheme === 'dark' ? Colors.dark.overlay : Colors.light.overlay;

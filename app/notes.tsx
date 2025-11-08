@@ -1,10 +1,9 @@
-import { documentDirectory, getInfoAsync, readAsStringAsync, writeAsStringAsync } from 'expo-file-system';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   ListRenderItem,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
@@ -17,6 +16,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/lib/supabase';
 
 type Note = {
   id: string;
@@ -25,38 +26,20 @@ type Note = {
   updatedAt: string;
 };
 
-const NOTES_STORAGE_KEY = '@daily-prayers/notes';
-const NOTES_STORAGE_FILE = 'notes.json';
+type SupabaseNoteRow = {
+  id: string;
+  title: string | null;
+  content: string | null;
+  updated_at: string | null;
+};
 
-function getStorageUri() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!documentDirectory) {
-    return null;
-  }
-
-  return `${documentDirectory}${NOTES_STORAGE_FILE}`;
-}
-
-function sanitizeNotes(payload: unknown): Note[] {
-  if (!Array.isArray(payload)) {
-    return [];
-  }
-
-  return payload
-    .filter((item): item is Partial<Note> & { id: unknown } => typeof item === 'object' && item !== null)
-    .map((item) => ({
-      id: typeof item.id === 'string' ? item.id : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      title: typeof item.title === 'string' ? item.title : '',
-      content: typeof item.content === 'string' ? item.content : '',
-      updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : new Date().toISOString(),
-    }));
-}
-
-function createNoteId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function mapNoteRow(row: SupabaseNoteRow): Note {
+  return {
+    id: row.id,
+    title: typeof row.title === 'string' ? row.title : '',
+    content: typeof row.content === 'string' ? row.content : '',
+    updatedAt: typeof row.updated_at === 'string' ? row.updated_at : new Date().toISOString(),
+  };
 }
 
 function formatUpdatedAt(value: string) {
@@ -92,7 +75,10 @@ export default function NotesScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
+  const { user } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
@@ -111,80 +97,44 @@ export default function NotesScreen() {
   useEffect(() => {
     let isMounted = true;
 
-    (async () => {
+    if (!user) {
+      setNotes([]);
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const loadNotes = async () => {
+      setIsLoading(true);
+
       try {
-        if (Platform.OS === 'web') {
-          if (typeof window === 'undefined' || !isMounted) {
-            return;
-          }
-
-          const stored = window.localStorage.getItem(NOTES_STORAGE_KEY);
-
-          if (!stored) {
-            return;
-          }
-
-          const parsed = JSON.parse(stored) as unknown;
-          const sanitized = sanitizeNotes(parsed);
-
-          if (isMounted) {
-            setNotes(sanitized);
-          }
-
+        const rows = await supabase.fetchNotes(user.id);
+        if (!isMounted) {
           return;
         }
 
-        const storageUri = getStorageUri();
-
-        if (!storageUri) {
-          return;
-        }
-
-        const fileInfo = await getInfoAsync(storageUri);
-
-        if (!fileInfo.exists) {
-          return;
-        }
-
-        const content = await readAsStringAsync(storageUri);
-        const parsed = JSON.parse(content) as unknown;
-        const sanitized = sanitizeNotes(parsed);
-
-        if (isMounted) {
-          setNotes(sanitized);
-        }
+        const mapped = rows.map((row) => mapNoteRow(row as SupabaseNoteRow));
+        setNotes(mapped);
+        setSyncError(null);
       } catch (error) {
-        console.error('Não foi possível carregar as anotações salvas.', error);
+        console.error('Não foi possível carregar as anotações do Supabase.', error);
+        if (isMounted) {
+          setSyncError('Não foi possível sincronizar as anotações. Tente novamente mais tarde.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    })();
+    };
+
+    void loadNotes();
 
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const persistNotes = useCallback(async (payload: Note[]) => {
-    try {
-      if (Platform.OS === 'web') {
-        if (typeof window === 'undefined') {
-          return;
-        }
-
-        window.localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(payload));
-        return;
-      }
-
-      const storageUri = getStorageUri();
-
-      if (!storageUri) {
-        return;
-      }
-
-      await writeAsStringAsync(storageUri, JSON.stringify(payload));
-    } catch (error) {
-      console.error('Não foi possível persistir as anotações.', error);
-    }
-  }, []);
+  }, [user]);
 
   const resetForm = useCallback(() => {
     setTitle('');
@@ -200,37 +150,57 @@ export default function NotesScreen() {
       return;
     }
 
+    if (!user) {
+      setSyncError('É necessário estar autenticado para salvar anotações.');
+      return;
+    }
+
     setIsSaving(true);
     const timestamp = new Date().toISOString();
 
     try {
-      let nextNotes: Note[];
-
       if (editingNoteId) {
-        nextNotes = notes.map((note) =>
-          note.id === editingNoteId
-            ? { ...note, title: normalizedTitle, content: normalizedContent, updatedAt: timestamp }
-            : note,
-        );
-      } else {
-        const newNote: Note = {
-          id: createNoteId(),
+        const updatedRow = await supabase.updateNote({
+          id: editingNoteId,
+          userId: user.id,
           title: normalizedTitle,
           content: normalizedContent,
           updatedAt: timestamp,
-        };
-        nextNotes = [...notes, newNote];
+        });
+
+        if (!updatedRow) {
+          throw new Error('Não foi possível atualizar a anotação.');
+        }
+
+        const updatedNote = mapNoteRow(updatedRow as SupabaseNoteRow);
+        setNotes((prev) =>
+          prev.map((note) => (note.id === updatedNote.id ? updatedNote : note)),
+        );
+      } else {
+        const insertedRow = await supabase.insertNote({
+          userId: user.id,
+          title: normalizedTitle,
+          content: normalizedContent,
+          updatedAt: timestamp,
+        });
+
+        if (!insertedRow) {
+          throw new Error('Não foi possível salvar a anotação.');
+        }
+
+        const newNote = mapNoteRow(insertedRow as SupabaseNoteRow);
+        setNotes((prev) => [...prev, newNote]);
       }
 
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      setSyncError(null);
       resetForm();
     } catch (error) {
       console.error('Não foi possível salvar a anotação.', error);
+      setSyncError('Não foi possível salvar a anotação no Supabase. Verifique sua conexão.');
     } finally {
       setIsSaving(false);
     }
-  }, [content, editingNoteId, notes, persistNotes, resetForm, title]);
+  }, [content, editingNoteId, resetForm, title, user]);
 
   const handleSelectNote = useCallback(
     (note: Note) => {
@@ -243,15 +213,29 @@ export default function NotesScreen() {
 
   const handleDeleteNote = useCallback(
     async (id: string) => {
-      const nextNotes = notes.filter((note) => note.id !== id);
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      if (!user) {
+        setSyncError('É necessário estar autenticado para remover anotações.');
+        return;
+      }
+
+      const previousNotes = notes;
+      setNotes((prev) => prev.filter((note) => note.id !== id));
+
+      try {
+        await supabase.deleteNote(id, user.id);
+        setSyncError(null);
+      } catch (error) {
+        console.error('Não foi possível remover a anotação.', error);
+        setNotes(previousNotes);
+        setSyncError('Não foi possível excluir a anotação no Supabase. Tente novamente.');
+        return;
+      }
 
       if (editingNoteId === id) {
         resetForm();
       }
     },
-    [editingNoteId, notes, persistNotes, resetForm],
+    [editingNoteId, notes, resetForm, user],
   );
 
   const sortedNotes = useMemo(() => {
@@ -372,6 +356,16 @@ export default function NotesScreen() {
               <ThemedText style={[styles.lead, { color: mutedText }]}>
                 Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.
               </ThemedText>
+              {syncError ? (
+                <ThemedText
+                  style={[
+                    styles.syncError,
+                    { color: colorScheme === 'dark' ? '#FCA5A5' : '#B91C1C' },
+                  ]}
+                >
+                  {syncError}
+                </ThemedText>
+              ) : null}
               <TextInput
                 value={searchTerm}
                 onChangeText={setSearchTerm}
@@ -454,17 +448,30 @@ export default function NotesScreen() {
             </View>
           }
           ListEmptyComponent={
-            <ThemedView
-              style={styles.emptyState}
-              lightColor={Colors.light.surfaceMuted}
-              darkColor={Colors.dark.surfaceMuted}>
-              <ThemedText style={styles.emptyStateTitle}>Nenhuma anotação encontrada</ThemedText>
-              <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
-                {searchTerm
-                  ? 'Tente ajustar os termos de busca para localizar uma anotação existente.'
-                  : 'Escreva sua primeira anotação acima para organizar pensamentos e inspirações.'}
-              </ThemedText>
-            </ThemedView>
+            isLoading ? (
+              <ThemedView
+                style={styles.emptyState}
+                lightColor={Colors.light.surfaceMuted}
+                darkColor={Colors.dark.surfaceMuted}>
+                <ActivityIndicator size="large" color={accentColor} />
+                <ThemedText style={styles.emptyStateTitle}>Carregando anotações...</ThemedText>
+                <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
+                  Conectando ao Supabase para recuperar suas notas.
+                </ThemedText>
+              </ThemedView>
+            ) : (
+              <ThemedView
+                style={styles.emptyState}
+                lightColor={Colors.light.surfaceMuted}
+                darkColor={Colors.dark.surfaceMuted}>
+                <ThemedText style={styles.emptyStateTitle}>Nenhuma anotação encontrada</ThemedText>
+                <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
+                  {searchTerm
+                    ? 'Tente ajustar os termos de busca para localizar uma anotação existente.'
+                    : 'Escreva sua primeira anotação acima para organizar pensamentos e inspirações.'}
+                </ThemedText>
+              </ThemedView>
+            )
           }
           keyboardShouldPersistTaps="handled"
         />
@@ -507,6 +514,10 @@ const styles = StyleSheet.create({
   },
   lead: {
     lineHeight: 20,
+  },
+  syncError: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,

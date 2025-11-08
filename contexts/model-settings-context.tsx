@@ -8,16 +8,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Platform } from 'react-native';
-import {
-  documentDirectory,
-  getInfoAsync,
-  readAsStringAsync,
-  writeAsStringAsync,
-} from 'expo-file-system';
 
-const STORAGE_KEY = '@daily-prayers/model-settings';
-const STORAGE_FILE = 'model-settings.json';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/auth-context';
 
 export const AVAILABLE_MODELS = ['gpt-5-mini', 'gpt-4o-mini'] as const;
 
@@ -46,18 +39,6 @@ const ModelSettingsContext = createContext<ModelSettingsContextValue | undefined
   undefined
 );
 
-function getStorageUri() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!documentDirectory) {
-    return null;
-  }
-
-  return `${documentDirectory}${STORAGE_FILE}`;
-}
-
 function sanitizeModel(value: unknown): ModelOption | null {
   if (typeof value !== 'string') {
     return null;
@@ -68,109 +49,82 @@ function sanitizeModel(value: unknown): ModelOption | null {
     : null;
 }
 
-function sanitizeSettings(payload: unknown): ModelSettingsState | null {
-  if (typeof payload !== 'object' || payload === null) {
-    return null;
-  }
-
-  const candidate = payload as Partial<Record<keyof ModelSettingsState, unknown>>;
-  const catechistModel = sanitizeModel(candidate.catechistModel);
-  const chatModel = sanitizeModel(candidate.chatModel);
-
-  return {
-    catechistModel: catechistModel ?? DEFAULT_SETTINGS.catechistModel,
-    chatModel: chatModel ?? DEFAULT_SETTINGS.chatModel,
-  };
-}
-
-async function readStoredSettings(): Promise<ModelSettingsState | null> {
-  try {
-    if (Platform.OS === 'web') {
-      if (typeof window === 'undefined') {
-        return null;
-      }
-
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-
-      if (!stored) {
-        return null;
-      }
-
-      const parsed = JSON.parse(stored) as unknown;
-      return sanitizeSettings(parsed);
-    }
-
-    const uri = getStorageUri();
-
-    if (!uri) {
-      return null;
-    }
-
-    const info = await getInfoAsync(uri);
-
-    if (!info.exists) {
-      return null;
-    }
-
-    const stored = await readAsStringAsync(uri);
-    const parsed = JSON.parse(stored) as unknown;
-    return sanitizeSettings(parsed);
-  } catch (error) {
-    console.warn('Não foi possível carregar as configurações de modelos.', error);
-    return null;
-  }
-}
-
-async function persistSettings(settings: ModelSettingsState) {
-  try {
-    const serialized = JSON.stringify(settings);
-
-    if (Platform.OS === 'web') {
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      window.localStorage.setItem(STORAGE_KEY, serialized);
-      return;
-    }
-
-    const uri = getStorageUri();
-
-    if (!uri) {
-      return;
-    }
-
-    await writeAsStringAsync(uri, serialized);
-  } catch (error) {
-    console.warn('Não foi possível salvar as configurações de modelos.', error);
-  }
-}
-
 export function ModelSettingsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<ModelSettingsState>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const hasHydratedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
+    hasHydratedRef.current = false;
 
-    (async () => {
-      const stored = await readStoredSettings();
+    if (!user) {
+      setSettings(DEFAULT_SETTINGS);
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
 
-      if (stored && isMounted) {
-        setSettings(stored);
+    const loadSettings = async () => {
+      setIsLoading(true);
+
+      try {
+        const stored = await supabase.fetchModelSettings(user.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (stored) {
+          const sanitized: ModelSettingsState = {
+            catechistModel:
+              sanitizeModel(stored.catechist_model) ?? DEFAULT_SETTINGS.catechistModel,
+            chatModel:
+              sanitizeModel(stored.chat_model) ?? DEFAULT_SETTINGS.chatModel,
+          };
+          setSettings(sanitized);
+        } else {
+          await supabase.upsertModelSettings(user.id, DEFAULT_SETTINGS);
+          if (isMounted) {
+            setSettings(DEFAULT_SETTINGS);
+          }
+        }
+      } catch (error) {
+        console.warn('Não foi possível carregar as configurações de modelos no Supabase.', error);
+        if (isMounted) {
+          setSettings(DEFAULT_SETTINGS);
+        }
+      } finally {
+        if (isMounted) {
+          hasHydratedRef.current = true;
+          setIsLoading(false);
+        }
       }
+    };
 
-      if (isMounted) {
-        setIsLoading(false);
-        hasHydratedRef.current = true;
-      }
-    })();
+    void loadSettings();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user]);
+
+  const persistSettings = useCallback(
+    async (next: ModelSettingsState) => {
+      if (!user) {
+        return;
+      }
+
+      try {
+        await supabase.upsertModelSettings(user.id, next);
+      } catch (error) {
+        console.warn('Não foi possível salvar as configurações de modelos no Supabase.', error);
+      }
+    },
+    [user],
+  );
 
   const updateSettings = useCallback(
     (updater: (previous: ModelSettingsState) => ModelSettingsState) => {
@@ -184,21 +138,21 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    []
+    [persistSettings],
   );
 
   const setCatechistModel = useCallback(
     (model: ModelOption) => {
       updateSettings((prev) => ({ ...prev, catechistModel: model }));
     },
-    [updateSettings]
+    [updateSettings],
   );
 
   const setChatModel = useCallback(
     (model: ModelOption) => {
       updateSettings((prev) => ({ ...prev, chatModel: model }));
     },
-    [updateSettings]
+    [updateSettings],
   );
 
   const value = useMemo<ModelSettingsContextValue>(
@@ -210,7 +164,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       isLoading,
       availableModels: AVAILABLE_MODELS,
     }),
-    [isLoading, setCatechistModel, setChatModel, settings]
+    [isLoading, setCatechistModel, setChatModel, settings],
   );
 
   return (
