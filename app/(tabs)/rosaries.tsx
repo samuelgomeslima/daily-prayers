@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { PrayerBeadTracker, type PrayerSequence } from '@/components/prayer-bead-tracker';
+import {
+  PrayerBeadTracker,
+  type PrayerBeadTrackerState,
+  type PrayerSequence,
+} from '@/components/prayer-bead-tracker';
 import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
@@ -338,17 +342,13 @@ const sequences: PrayerSequence[] = [
 export default function RosariesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
-  const [expandedSequenceId, setExpandedSequenceId] = useState<string | null>(null);
   const [activeModalSequence, setActiveModalSequence] = useState<PrayerSequence | null>(null);
+  const [trackerStates, setTrackerStates] = useState<Record<string, PrayerBeadTrackerState>>({});
 
   const todayMysterySet = getTodayMysterySet(ROSARY_MYSTERY_SETS);
   const dailyRosarySequence = todayMysterySet
     ? createDailyRosarySequence(todayMysterySet)
     : null;
-
-  const toggleSequence = (sequenceId: string) => {
-    setExpandedSequenceId((current) => (current === sequenceId ? null : sequenceId));
-  };
 
   const openSequenceModal = (sequence: PrayerSequence) => {
     setActiveModalSequence(sequence);
@@ -459,86 +459,48 @@ export default function RosariesScreen() {
           atual.
         </ThemedText>
 
-        {sequences.map((sequence) => {
-          const isExpanded = expandedSequenceId === sequence.id;
-          return (
-            <ThemedView
-              key={sequence.id}
-              style={[
-                styles.sequenceCard,
-                {
-                  borderColor: `${palette.border}99`,
-                  shadowColor: `${palette.tint}1A`,
-                },
-                isExpanded && {
-                  borderColor: palette.tint,
-                  backgroundColor: `${palette.tint}0D`,
-                  shadowColor: `${palette.tint}33`,
-                },
+        {sequences.map((sequence) => (
+          <ThemedView
+            key={sequence.id}
+            style={[
+              styles.sequenceCard,
+              {
+                borderColor: `${palette.border}99`,
+                shadowColor: `${palette.tint}1A`,
+              },
+            ]}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}
+          >
+            <Pressable
+              onPress={() => openSequenceModal(sequence)}
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir o ${sequence.name} em modal`}
+              style={({ pressed }) => [
+                styles.sequenceHeader,
+                pressed && { opacity: 0.7 },
               ]}
-              lightColor={Colors.light.surface}
-              darkColor={Colors.dark.surface}
             >
-              <Pressable
-                onPress={() => toggleSequence(sequence.id)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: isExpanded }}
-                style={({ pressed }) => [
-                  styles.sequenceHeader,
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <View style={styles.sequenceHeaderText}>
-                  <ThemedText
-                    type="subtitle"
-                    style={[styles.sequenceTitle, { fontFamily: Fonts.serif }]}
-                  >
-                    {sequence.name}
-                  </ThemedText>
-                  <ThemedText
-                    style={styles.sequenceHint}
-                    lightColor={`${Colors.light.text}7A`}
-                    darkColor={`${Colors.dark.text}7A`}
-                  >
-                    Toque para {isExpanded ? 'fechar' : 'abrir'} o contador interativo.
-                  </ThemedText>
-                </View>
-                <IconSymbol
-                  name={isExpanded ? 'chevron.up.circle.fill' : 'chevron.down.circle'}
-                  size={28}
-                  color={palette.tint}
-                />
-              </Pressable>
-              <ThemedText style={styles.sequenceDescription}>{sequence.description}</ThemedText>
-
-              {sequence.id === 'dominican-rosary' ? (
-                <Pressable
-                  onPress={() => openSequenceModal(sequence)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Abrir o Santo Rosário em modal"
-                  style={({ pressed }) => [
-                    styles.modalTriggerButton,
-                    { backgroundColor: `${palette.tint}14`, borderColor: `${palette.tint}33` },
-                    pressed && { opacity: 0.7 },
-                  ]}
+              <View style={styles.sequenceHeaderText}>
+                <ThemedText
+                  type="subtitle"
+                  style={[styles.sequenceTitle, { fontFamily: Fonts.serif }]}
                 >
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={[styles.modalTriggerLabel, { color: palette.tint }]}
-                  >
-                    Abrir modal do Santo Rosário
-                  </ThemedText>
-                </Pressable>
-              ) : null}
-
-              {isExpanded && (
-                <View style={styles.trackerWrapper}>
-                  <PrayerBeadTracker sequence={sequence} />
-                </View>
-              )}
-            </ThemedView>
-          );
-        })}
+                  {sequence.name}
+                </ThemedText>
+                <ThemedText
+                  style={styles.sequenceHint}
+                  lightColor={`${Colors.light.text}7A`}
+                  darkColor={`${Colors.dark.text}7A`}
+                >
+                  Toque para abrir o contador em modal.
+                </ThemedText>
+              </View>
+              <IconSymbol name="chevron.right.circle" size={28} color={palette.tint} />
+            </Pressable>
+            <ThemedText style={styles.sequenceDescription}>{sequence.description}</ThemedText>
+          </ThemedView>
+        ))}
       </ThemedView>
       </ParallaxScrollView>
 
@@ -571,7 +533,19 @@ export default function RosariesScreen() {
               </Pressable>
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
-              {activeModalSequence ? <PrayerBeadTracker sequence={activeModalSequence} /> : null}
+              {activeModalSequence ? (
+                <PrayerBeadTracker
+                  key={activeModalSequence.id}
+                  sequence={activeModalSequence}
+                  initialState={trackerStates[activeModalSequence.id]}
+                  onStateChange={(state) => {
+                    setTrackerStates((current) => ({
+                      ...current,
+                      [activeModalSequence.id]: state,
+                    }));
+                  }}
+                />
+              ) : null}
             </ScrollView>
           </ThemedView>
         </View>
@@ -694,19 +668,6 @@ const styles = StyleSheet.create({
   },
   sequenceHint: {
     fontSize: 13,
-  },
-  trackerWrapper: {
-    marginTop: 8,
-  },
-  modalTriggerButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  modalTriggerLabel: {
-    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
