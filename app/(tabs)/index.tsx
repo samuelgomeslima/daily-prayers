@@ -51,6 +51,21 @@ export default function HomeScreen() {
         </ThemedText>
       </ThemedView>
 
+      <FeatureCard title="Liturgia Diária (Brasil)">
+        <ThemedText style={styles.cardText}>
+          Conteúdo sincronizado com o portal da Canção Nova, garantindo acesso às leituras,
+          salmos e orações publicados em{' '}
+          <ExternalLink href="https://liturgia.cancaonova.com/pb/">
+            <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
+          </ExternalLink>
+          . Respeitamos o formato original exibindo o link oficial em todas as sessões do app.
+        </ThemedText>
+        <ThemedText style={styles.cardNote}>
+          • Conteúdo armazenado localmente apenas para leitura offline temporária, sempre
+          com sincronização direta diária da fonte oficial.
+        </ThemedText>
+      </FeatureCard>
+
       <FeatureCard title="Horários de Missas e Confissões">
         <ThemedText style={styles.cardText}>
           Não há API nacional unificada. Mantemos cadastro manual colaborativo e indicamos o
@@ -70,39 +85,20 @@ export default function HomeScreen() {
         </ThemedText>
       </FeatureCard>
 
-      <FeatureCard title="Documentos e Liturgia (Vaticano)">
+      <FeatureCard title="Santo do Dia">
         <ThemedText style={styles.cardText}>
-          Direcionamos os usuários para o portal oficial do Vaticano, garantindo acesso
-          direto às constituições, homilias e textos litúrgicos publicados pela Santa Sé
-          no site original.
-        </ThemedText>
-        <ThemedText style={styles.cardText}>
-          Também destacamos as notícias em português do Vatican News, atualizadas pela
-          própria Santa Sé. Ambos os canais são abertos no navegador do dispositivo para
-          respeitar as diretrizes de acesso e funcionamento de cada site.
+          Consumimos portais católicos confiáveis, como Canção Nova, e mantemos cache
+          diário para reduzir acessos consecutivos. Créditos e links diretos são exibidos
+          no app junto ao conteúdo resumido.
         </ThemedText>
         <View style={styles.actions}>
-          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
-            <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.vaticannews.va/pt.html">
-            <ThemedText type="link">Vatican News em português</ThemedText>
+          <ExternalLink href="https://santo.cancaonova.com/">
+            <ThemedText type="link">Santo do Dia – Canção Nova</ThemedText>
           </ExternalLink>
         </View>
-      </FeatureCard>
-
-      <FeatureCard title="Liturgia Diária (Brasil)">
-        <ThemedText style={styles.cardText}>
-          Conteúdo sincronizado com o portal da Canção Nova, garantindo acesso às leituras,
-          salmos e orações publicados em{' '}
-          <ExternalLink href="https://liturgia.cancaonova.com/pb/">
-            <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
-          </ExternalLink>
-          . Respeitamos o formato original exibindo o link oficial em todas as sessões do app.
-        </ThemedText>
         <ThemedText style={styles.cardNote}>
-          • Conteúdo armazenado localmente apenas para leitura offline temporária, sempre
-          com sincronização direta diária da fonte oficial.
+          • O cache é renovado diariamente e limpo automaticamente para garantir que novas
+          biografias sejam carregadas com pontualidade.
         </ThemedText>
       </FeatureCard>
 
@@ -132,21 +128,25 @@ export default function HomeScreen() {
         </ThemedText>
       </FeatureCard>
 
-      <FeatureCard title="Santo do Dia">
+      <FeatureCard title="Documentos e Liturgia (Vaticano)">
         <ThemedText style={styles.cardText}>
-          Consumimos portais católicos confiáveis, como Canção Nova, e mantemos cache
-          diário para reduzir acessos consecutivos. Créditos e links diretos são exibidos
-          no app junto ao conteúdo resumido.
+          Direcionamos os usuários para o portal oficial do Vaticano, garantindo acesso
+          direto às constituições, homilias e textos litúrgicos publicados pela Santa Sé
+          no site original.
+        </ThemedText>
+        <ThemedText style={styles.cardText}>
+          Também destacamos as notícias em português do Vatican News, atualizadas pela
+          própria Santa Sé. Ambos os canais são abertos no navegador do dispositivo para
+          respeitar as diretrizes de acesso e funcionamento de cada site.
         </ThemedText>
         <View style={styles.actions}>
-          <ExternalLink href="https://santo.cancaonova.com/">
-            <ThemedText type="link">Santo do Dia – Canção Nova</ThemedText>
+          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
+            <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
+          </ExternalLink>
+          <ExternalLink href="https://www.vaticannews.va/pt.html">
+            <ThemedText type="link">Vatican News em português</ThemedText>
           </ExternalLink>
         </View>
-        <ThemedText style={styles.cardNote}>
-          • O cache é renovado diariamente e limpo automaticamente para garantir que novas
-          biografias sejam carregadas com pontualidade.
-        </ThemedText>
       </FeatureCard>
     </ParallaxScrollView>
   );

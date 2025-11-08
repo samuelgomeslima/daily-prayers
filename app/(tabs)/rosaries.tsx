@@ -1,122 +1,87 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { PrayerBeadTracker, type PrayerSequence } from '@/components/prayer-bead-tracker';
-import { RosaryMysteryTracker, type MysterySet } from '@/components/rosary-mystery-tracker';
+import { RosaryMysteryTracker } from '@/components/rosary-mystery-tracker';
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import {
+  ROSARY_MYSTERY_SETS,
+  getTodayMysterySet,
+  type MysterySet,
+} from '@/constants/rosary';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-const dailyMysteries: MysterySet[] = [
-  {
-    id: 'joyful',
-    title: 'Mistérios Gozosos',
-    days: 'Segunda-feira e Sábado',
-    mysteries: [
-      '1º A Anunciação do Anjo Gabriel a Maria',
-      '2º A visitação de Maria a Santa Isabel',
-      '3º O nascimento de Jesus em Belém',
-      '4º A apresentação de Jesus no Templo',
-      '5º O reencontro de Jesus no Templo',
-    ],
-  },
-  {
-    id: 'sorrowful',
-    title: 'Mistérios Dolorosos',
-    days: 'Terça-feira e Sexta-feira',
-    mysteries: [
-      '1º A agonia de Jesus no Horto',
-      '2º A flagelação de Jesus atado à coluna',
-      '3º A coroação de espinhos',
-      '4º Jesus carrega a cruz até o Calvário',
-      '5º A crucifixão e morte de Jesus',
-    ],
-  },
-  {
-    id: 'glorious',
-    title: 'Mistérios Gloriosos',
-    days: 'Quarta-feira e Domingo',
-    mysteries: [
-      '1º A ressurreição do Senhor',
-      '2º A ascensão de Jesus aos céus',
-      '3º A vinda do Espírito Santo em Pentecostes',
-      '4º A assunção de Maria ao céu',
-      '5º A coroação de Maria como Rainha do Céu e da Terra',
-    ],
-  },
-  {
-    id: 'luminous',
-    title: 'Mistérios Luminosos',
-    days: 'Quinta-feira',
-    mysteries: [
-      '1º O Batismo de Jesus no Jordão',
-      '2º As Bodas de Caná',
-      '3º O anúncio do Reino de Deus com o convite à conversão',
-      '4º A Transfiguração de Jesus',
-      '5º A instituição da Eucaristia',
-    ],
-  },
+const createOpeningSection = (prefix: string) => ({
+  title: 'Abertura',
+  description:
+    'Inicie com o Sinal da Cruz, reze o Credo, um Pai-Nosso, três Ave-Marias e o Glória ao Pai.',
+  beads: [
+    { id: `${prefix}-opening-cross`, label: 'Sinal da Cruz', type: 'marker' },
+    { id: `${prefix}-opening-creed`, label: 'Credo dos Apóstolos', type: 'large' },
+    { id: `${prefix}-opening-our-father`, label: 'Pai-Nosso', type: 'large' },
+    { id: `${prefix}-opening-hail-1`, label: 'Ave-Maria 1', type: 'small' },
+    { id: `${prefix}-opening-hail-2`, label: 'Ave-Maria 2', type: 'small' },
+    { id: `${prefix}-opening-hail-3`, label: 'Ave-Maria 3', type: 'small' },
+    { id: `${prefix}-opening-glory`, label: 'Glória ao Pai', type: 'marker' },
+  ],
+});
+
+const createClosingSection = (prefix: string) => ({
+  title: 'Conclusão',
+  description: 'Reze a Salve Rainha e as jaculatórias finais.',
+  beads: [
+    { id: `${prefix}-closing-hail-holy-queen`, label: 'Salve Rainha', type: 'marker' },
+    { id: `${prefix}-closing-final-prayers`, label: 'Orações finais', type: 'marker' },
+  ],
+});
+
+const createDecadeBeads = (baseId: string) => [
+  { id: `${baseId}-our-father`, label: 'Pai-Nosso', type: 'large' },
+  ...Array.from({ length: 10 }, (_, beadIndex) => ({
+    id: `${baseId}-hail-${beadIndex + 1}`,
+    label: `Ave-Maria ${beadIndex + 1}`,
+    type: 'small',
+  })),
+  { id: `${baseId}-glory`, label: 'Glória ao Pai', type: 'marker' },
 ];
+
+const createMysterySections = (set: MysterySet, prefix: string) =>
+  set.mysteries.map((mystery, index) => {
+    const orderNumber = index + 1;
+    return {
+      title: `${set.title} — Mistério ${orderNumber}`,
+      description: mystery,
+      beads: createDecadeBeads(`${prefix}-${set.id}-mystery-${orderNumber}`),
+    };
+  });
 
 const rosarySequence: PrayerSequence = {
   id: 'dominican-rosary',
   name: 'Santo Rosário',
   description:
-    'Acompanhe cada conta do rosário dominicano, marcando Pai-Nossos, Ave-Marias e orações finais.',
+    'Acompanhe cada conta do rosário dominicano, percorrendo os quatro mistérios em sequência.',
   sections: [
-    {
-      title: 'Abertura',
-      description:
-        'Inicie com o Sinal da Cruz, reze o Credo, um Pai-Nosso, três Ave-Marias e o Glória ao Pai.',
-      beads: [
-        { id: 'rosary-opening-cross', label: 'Sinal da Cruz', type: 'marker' },
-        { id: 'rosary-opening-creed', label: 'Credo dos Apóstolos', type: 'large' },
-        { id: 'rosary-opening-our-father', label: 'Pai-Nosso', type: 'large' },
-        { id: 'rosary-opening-hail-1', label: 'Ave-Maria 1', type: 'small' },
-        { id: 'rosary-opening-hail-2', label: 'Ave-Maria 2', type: 'small' },
-        { id: 'rosary-opening-hail-3', label: 'Ave-Maria 3', type: 'small' },
-        { id: 'rosary-opening-glory', label: 'Glória ao Pai', type: 'marker' },
-      ],
-    },
-    ...Array.from({ length: 5 }, (_, index) => {
-      const decadeNumber = index + 1;
-      return {
-        title: `Dezena ${decadeNumber}`,
-        description:
-          'Medite no mistério correspondente, reze um Pai-Nosso, dez Ave-Marias e o Glória ao Pai.',
-        beads: [
-          {
-            id: `rosary-decade-${decadeNumber}-our-father`,
-            label: 'Pai-Nosso',
-            type: 'large',
-          },
-          ...Array.from({ length: 10 }, (_, beadIndex) => ({
-            id: `rosary-decade-${decadeNumber}-hail-${beadIndex + 1}`,
-            label: `Ave-Maria ${beadIndex + 1}`,
-            type: 'small',
-          })),
-          {
-            id: `rosary-decade-${decadeNumber}-glory`,
-            label: 'Glória ao Pai',
-            type: 'marker',
-          },
-        ],
-      };
-    }),
-    {
-      title: 'Conclusão',
-      description: 'Reze a Salve Rainha e as jaculatórias finais.',
-      beads: [
-        { id: 'rosary-closing-hail-holy-queen', label: 'Salve Rainha', type: 'marker' },
-        { id: 'rosary-closing-final-prayers', label: 'Orações finais', type: 'marker' },
-      ],
-    },
+    createOpeningSection('rosary'),
+    ...ROSARY_MYSTERY_SETS.flatMap((set) => createMysterySections(set, 'rosary')),
+    createClosingSection('rosary'),
   ],
 };
+
+const createDailyRosarySequence = (set: MysterySet): PrayerSequence => ({
+  id: `daily-${set.id}-rosary`,
+  name: `Terço do Dia — ${set.title}`,
+  description: `Reze com os ${set.title} propostos para ${set.days}.`,
+  sections: [
+    createOpeningSection(`daily-${set.id}`),
+    ...createMysterySections(set, 'daily'),
+    createClosingSection(`daily-${set.id}`),
+  ],
+});
 
 const mercySequence: PrayerSequence = {
   id: 'divine-mercy-chaplet',
@@ -374,13 +339,28 @@ export default function RosariesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const [expandedSequenceId, setExpandedSequenceId] = useState<string | null>(null);
+  const [activeModalSequence, setActiveModalSequence] = useState<PrayerSequence | null>(null);
+
+  const todayMysterySet = getTodayMysterySet(ROSARY_MYSTERY_SETS);
+  const dailyRosarySequence = todayMysterySet
+    ? createDailyRosarySequence(todayMysterySet)
+    : null;
 
   const toggleSequence = (sequenceId: string) => {
     setExpandedSequenceId((current) => (current === sequenceId ? null : sequenceId));
   };
 
+  const openSequenceModal = (sequence: PrayerSequence) => {
+    setActiveModalSequence(sequence);
+  };
+
+  const closeModal = () => {
+    setActiveModalSequence(null);
+  };
+
   return (
-    <ParallaxScrollView
+    <>
+      <ParallaxScrollView
       headerBackgroundColor={{
         light: Colors.light.heroAccent,
         dark: Colors.dark.heroAccent,
@@ -417,11 +397,61 @@ export default function RosariesScreen() {
           cada mistério ao avançar pelas dezenas.
         </ThemedText>
 
-        <RosaryMysteryTracker sets={dailyMysteries} />
+        <RosaryMysteryTracker sets={ROSARY_MYSTERY_SETS} />
+
+        {todayMysterySet && dailyRosarySequence ? (
+          <ThemedView
+            style={[
+              styles.dailyActionCard,
+              {
+                borderColor: `${palette.border}99`,
+                shadowColor: `${palette.tint}1A`,
+              },
+            ]}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}
+          >
+            <View style={styles.dailyActionHeader}>
+              <ThemedText
+                type="subtitle"
+                style={[styles.dailyActionTitle, { fontFamily: Fonts.serif }]}
+              >
+                Terço do dia — {todayMysterySet.title}
+              </ThemedText>
+              <ThemedText
+                style={styles.dailyActionSubtitle}
+                lightColor={`${Colors.light.tint}AA`}
+                darkColor={`${Colors.dark.tint}AA`}
+              >
+                {todayMysterySet.days}
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.dailyActionDescription}>
+              Abra um contador dedicado aos mistérios indicados para a data de hoje.
+            </ThemedText>
+            <Pressable
+              onPress={() => openSequenceModal(dailyRosarySequence)}
+              style={({ pressed }) => [
+                styles.dailyActionButton,
+                { backgroundColor: `${palette.tint}1A`, borderColor: `${palette.tint}66` },
+                pressed && { opacity: 0.7 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Rezar o terço do dia com os ${todayMysterySet.title}`}
+            >
+              <ThemedText
+                type="defaultSemiBold"
+                style={[styles.dailyActionButtonLabel, { color: palette.tint }]}
+              >
+                Rezar terço do dia
+              </ThemedText>
+            </Pressable>
+          </ThemedView>
+        ) : null}
       </ThemedView>
 
       <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}>
+        <ThemedText type="subtitle" style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}> 
           Contadores interativos
         </ThemedText>
         <ThemedText style={styles.sectionDescription}>
@@ -481,6 +511,26 @@ export default function RosariesScreen() {
               </Pressable>
               <ThemedText style={styles.sequenceDescription}>{sequence.description}</ThemedText>
 
+              {sequence.id === 'dominican-rosary' ? (
+                <Pressable
+                  onPress={() => openSequenceModal(sequence)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir o Santo Rosário em modal"
+                  style={({ pressed }) => [
+                    styles.modalTriggerButton,
+                    { backgroundColor: `${palette.tint}14`, borderColor: `${palette.tint}33` },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <ThemedText
+                    type="defaultSemiBold"
+                    style={[styles.modalTriggerLabel, { color: palette.tint }]}
+                  >
+                    Abrir modal do Santo Rosário
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+
               {isExpanded && (
                 <View style={styles.trackerWrapper}>
                   <PrayerBeadTracker sequence={sequence} />
@@ -490,7 +540,43 @@ export default function RosariesScreen() {
           );
         })}
       </ThemedView>
-    </ParallaxScrollView>
+      </ParallaxScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={activeModalSequence !== null}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <ThemedView
+            style={styles.modalContainer}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}
+          >
+            <View style={styles.modalHeader}>
+              <ThemedText
+                type="subtitle"
+                style={[styles.modalTitle, { fontFamily: Fonts.serif }]}
+              >
+                {activeModalSequence?.name}
+              </ThemedText>
+              <Pressable
+                onPress={closeModal}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar contador do terço"
+                style={({ pressed }) => [styles.modalCloseButton, pressed && { opacity: 0.7 }]}
+              >
+                <IconSymbol name="xmark.circle.fill" size={24} color={palette.tint} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              {activeModalSequence ? <PrayerBeadTracker sequence={activeModalSequence} /> : null}
+            </ScrollView>
+          </ThemedView>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -545,6 +631,41 @@ const styles = StyleSheet.create({
   sectionDescription: {
     lineHeight: 22,
   },
+  dailyActionCard: {
+    marginTop: 20,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 18,
+    gap: 12,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 28,
+    shadowOpacity: 0.12,
+  },
+  dailyActionHeader: {
+    gap: 4,
+  },
+  dailyActionTitle: {
+    fontSize: 18,
+  },
+  dailyActionSubtitle: {
+    fontSize: 12,
+    fontFamily: Fonts.mono,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  dailyActionDescription: {
+    lineHeight: 20,
+  },
+  dailyActionButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  dailyActionButtonLabel: {
+    fontSize: 14,
+  },
   sequenceCard: {
     marginTop: 20,
     borderWidth: 1,
@@ -576,5 +697,42 @@ const styles = StyleSheet.create({
   },
   trackerWrapper: {
     marginTop: 8,
+  },
+  modalTriggerButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  modalTriggerLabel: {
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#00000066',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    borderRadius: 24,
+    padding: 20,
+    gap: 16,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  modalTitle: {
+    flex: 1,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalContent: {
+    paddingBottom: 20,
   },
 });
