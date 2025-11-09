@@ -8,16 +8,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Platform } from 'react-native';
-import {
-  documentDirectory,
-  getInfoAsync,
-  readAsStringAsync,
-  writeAsStringAsync,
-} from 'expo-file-system';
 
-const STORAGE_KEY = '@daily-prayers/model-settings';
-const STORAGE_FILE = 'model-settings.json';
+import { useAuth } from '@/hooks/use-auth';
+import { apiFetch } from '@/utils/api-client';
 
 export const AVAILABLE_MODELS = ['gpt-5-mini', 'gpt-4o-mini'] as const;
 
@@ -46,145 +39,85 @@ const ModelSettingsContext = createContext<ModelSettingsContextValue | undefined
   undefined
 );
 
-function getStorageUri() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!documentDirectory) {
-    return null;
-  }
-
-  return `${documentDirectory}${STORAGE_FILE}`;
-}
-
-function sanitizeModel(value: unknown): ModelOption | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  return AVAILABLE_MODELS.includes(value as ModelOption)
-    ? (value as ModelOption)
-    : null;
-}
-
-function sanitizeSettings(payload: unknown): ModelSettingsState | null {
-  if (typeof payload !== 'object' || payload === null) {
-    return null;
-  }
-
-  const candidate = payload as Partial<Record<keyof ModelSettingsState, unknown>>;
-  const catechistModel = sanitizeModel(candidate.catechistModel);
-  const chatModel = sanitizeModel(candidate.chatModel);
-
-  return {
-    catechistModel: catechistModel ?? DEFAULT_SETTINGS.catechistModel,
-    chatModel: chatModel ?? DEFAULT_SETTINGS.chatModel,
-  };
-}
-
-async function readStoredSettings(): Promise<ModelSettingsState | null> {
-  try {
-    if (Platform.OS === 'web') {
-      if (typeof window === 'undefined') {
-        return null;
-      }
-
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-
-      if (!stored) {
-        return null;
-      }
-
-      const parsed = JSON.parse(stored) as unknown;
-      return sanitizeSettings(parsed);
-    }
-
-    const uri = getStorageUri();
-
-    if (!uri) {
-      return null;
-    }
-
-    const info = await getInfoAsync(uri);
-
-    if (!info.exists) {
-      return null;
-    }
-
-    const stored = await readAsStringAsync(uri);
-    const parsed = JSON.parse(stored) as unknown;
-    return sanitizeSettings(parsed);
-  } catch (error) {
-    console.warn('Não foi possível carregar as configurações de modelos.', error);
-    return null;
-  }
-}
-
-async function persistSettings(settings: ModelSettingsState) {
-  try {
-    const serialized = JSON.stringify(settings);
-
-    if (Platform.OS === 'web') {
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      window.localStorage.setItem(STORAGE_KEY, serialized);
-      return;
-    }
-
-    const uri = getStorageUri();
-
-    if (!uri) {
-      return;
-    }
-
-    await writeAsStringAsync(uri, serialized);
-  } catch (error) {
-    console.warn('Não foi possível salvar as configurações de modelos.', error);
-  }
-}
+type ApiModelSettingsResponse = {
+  settings: ModelSettingsState;
+  availableModels: readonly ModelOption[];
+};
 
 export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ModelSettingsState>(DEFAULT_SETTINGS);
+  const [availableModels, setAvailableModels] = useState<readonly ModelOption[]>(AVAILABLE_MODELS);
   const [isLoading, setIsLoading] = useState(true);
   const hasHydratedRef = useRef(false);
+  const { status, token } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
 
-    (async () => {
-      const stored = await readStoredSettings();
-
-      if (stored && isMounted) {
-        setSettings(stored);
+    const load = async () => {
+      if (status !== 'authenticated' || !token) {
+        if (isMounted) {
+          setSettings(DEFAULT_SETTINGS);
+          setAvailableModels(AVAILABLE_MODELS);
+          setIsLoading(false);
+          hasHydratedRef.current = true;
+        }
+        return;
       }
 
-      if (isMounted) {
-        setIsLoading(false);
-        hasHydratedRef.current = true;
+      setIsLoading(true);
+
+      try {
+        const response = await apiFetch<ApiModelSettingsResponse>('/model-settings', { token });
+
+        if (isMounted) {
+          setSettings(response.settings);
+          setAvailableModels(response.availableModels);
+        }
+      } catch (error) {
+        console.warn('Não foi possível carregar as preferências de modelos.', error);
+        if (isMounted) {
+          setSettings(DEFAULT_SETTINGS);
+          setAvailableModels(AVAILABLE_MODELS);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          hasHydratedRef.current = true;
+        }
       }
-    })();
+    };
+
+    void load();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [status, token]);
 
   const updateSettings = useCallback(
     (updater: (previous: ModelSettingsState) => ModelSettingsState) => {
       setSettings((prev) => {
         const next = updater(prev);
 
-        if (hasHydratedRef.current) {
-          void persistSettings(next);
+        if (hasHydratedRef.current && token) {
+          void apiFetch<ApiModelSettingsResponse>('/model-settings', {
+            method: 'PUT',
+            token,
+            body: next,
+          })
+            .then((response) => {
+              setAvailableModels(response.availableModels);
+            })
+            .catch((error) => {
+              console.warn('Não foi possível atualizar as preferências de modelos.', error);
+            });
         }
 
         return next;
       });
     },
-    []
+    [token]
   );
 
   const setCatechistModel = useCallback(
@@ -208,9 +141,9 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       setCatechistModel,
       setChatModel,
       isLoading,
-      availableModels: AVAILABLE_MODELS,
+      availableModels,
     }),
-    [isLoading, setCatechistModel, setChatModel, settings]
+    [availableModels, isLoading, setCatechistModel, setChatModel, settings]
   );
 
   return (

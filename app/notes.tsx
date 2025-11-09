@@ -1,6 +1,6 @@
-import { documentDirectory, getInfoAsync, readAsStringAsync, writeAsStringAsync } from 'expo-file-system';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   ListRenderItem,
@@ -17,6 +17,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useAuth } from '@/hooks/use-auth';
+import { apiFetch, ApiError } from '@/utils/api-client';
 
 type Note = {
   id: string;
@@ -25,27 +27,12 @@ type Note = {
   updatedAt: string;
 };
 
-const NOTES_STORAGE_KEY = '@daily-prayers/notes';
-const NOTES_STORAGE_FILE = 'notes.json';
-
-function getStorageUri() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!documentDirectory) {
-    return null;
-  }
-
-  return `${documentDirectory}${NOTES_STORAGE_FILE}`;
-}
-
 function sanitizeNotes(payload: unknown): Note[] {
   if (!Array.isArray(payload)) {
     return [];
   }
 
-  return payload
+  const cleaned = payload
     .filter((item): item is Partial<Note> & { id: unknown } => typeof item === 'object' && item !== null)
     .map((item) => ({
       id: typeof item.id === 'string' ? item.id : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -53,10 +40,10 @@ function sanitizeNotes(payload: unknown): Note[] {
       content: typeof item.content === 'string' ? item.content : '',
       updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : new Date().toISOString(),
     }));
-}
 
-function createNoteId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return cleaned.sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
 }
 
 function formatUpdatedAt(value: string) {
@@ -92,6 +79,10 @@ export default function NotesScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const { status, token } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -108,83 +99,57 @@ export default function NotesScreen() {
   const inputBackground = surface;
   const inputBorder = borderColor;
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadNotes = useCallback(
+    async (options: { withSpinner?: boolean } = {}) => {
+      if (!token) {
+        return;
+      }
 
-    (async () => {
+      const withSpinner = options.withSpinner ?? true;
+
+      if (withSpinner) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
       try {
-        if (Platform.OS === 'web') {
-          if (typeof window === 'undefined' || !isMounted) {
-            return;
-          }
-
-          const stored = window.localStorage.getItem(NOTES_STORAGE_KEY);
-
-          if (!stored) {
-            return;
-          }
-
-          const parsed = JSON.parse(stored) as unknown;
-          const sanitized = sanitizeNotes(parsed);
-
-          if (isMounted) {
-            setNotes(sanitized);
-          }
-
-          return;
-        }
-
-        const storageUri = getStorageUri();
-
-        if (!storageUri) {
-          return;
-        }
-
-        const fileInfo = await getInfoAsync(storageUri);
-
-        if (!fileInfo.exists) {
-          return;
-        }
-
-        const content = await readAsStringAsync(storageUri);
-        const parsed = JSON.parse(content) as unknown;
-        const sanitized = sanitizeNotes(parsed);
-
-        if (isMounted) {
-          setNotes(sanitized);
-        }
+        const response = await apiFetch<{ notes: Note[] }>('/notes', { token });
+        const sanitized = sanitizeNotes(response?.notes ?? []);
+        setNotes(sanitized);
+        setErrorMessage(null);
       } catch (error) {
-        console.error('Não foi possível carregar as anotações salvas.', error);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const persistNotes = useCallback(async (payload: Note[]) => {
-    try {
-      if (Platform.OS === 'web') {
-        if (typeof window === 'undefined') {
-          return;
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível carregar as anotações.';
+        console.error('Falha ao carregar anotações.', error);
+        setErrorMessage(message);
+      } finally {
+        if (withSpinner) {
+          setIsLoading(false);
+        } else {
+          setIsRefreshing(false);
         }
-
-        window.localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(payload));
-        return;
       }
+    },
+    [token]
+  );
 
-      const storageUri = getStorageUri();
-
-      if (!storageUri) {
-        return;
-      }
-
-      await writeAsStringAsync(storageUri, JSON.stringify(payload));
-    } catch (error) {
-      console.error('Não foi possível persistir as anotações.', error);
+  useEffect(() => {
+    if (status !== 'authenticated') {
+      setNotes([]);
+      setIsLoading(false);
+      setErrorMessage(null);
+      return;
     }
-  }, []);
+
+    if (!token) {
+      return;
+    }
+
+    void loadNotes({ withSpinner: true });
+  }, [loadNotes, status, token]);
 
   const resetForm = useCallback(() => {
     setTitle('');
@@ -200,37 +165,41 @@ export default function NotesScreen() {
       return;
     }
 
+    if (!token) {
+      setErrorMessage('Sessão expirada. Faça login novamente.');
+      return;
+    }
+
     setIsSaving(true);
-    const timestamp = new Date().toISOString();
 
     try {
-      let nextNotes: Note[];
-
       if (editingNoteId) {
-        nextNotes = notes.map((note) =>
-          note.id === editingNoteId
-            ? { ...note, title: normalizedTitle, content: normalizedContent, updatedAt: timestamp }
-            : note,
-        );
+        await apiFetch<{ note: Note }>(`/notes/${editingNoteId}`, {
+          method: 'PUT',
+          token,
+          body: { title: normalizedTitle, content: normalizedContent },
+        });
       } else {
-        const newNote: Note = {
-          id: createNoteId(),
-          title: normalizedTitle,
-          content: normalizedContent,
-          updatedAt: timestamp,
-        };
-        nextNotes = [...notes, newNote];
+        await apiFetch<{ note: Note }>('/notes', {
+          method: 'POST',
+          token,
+          body: { title: normalizedTitle, content: normalizedContent },
+        });
       }
 
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      await loadNotes({ withSpinner: false });
       resetForm();
     } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível salvar a anotação.';
       console.error('Não foi possível salvar a anotação.', error);
+      setErrorMessage(message);
     } finally {
       setIsSaving(false);
     }
-  }, [content, editingNoteId, notes, persistNotes, resetForm, title]);
+  }, [content, editingNoteId, loadNotes, resetForm, title, token]);
 
   const handleSelectNote = useCallback(
     (note: Note) => {
@@ -243,15 +212,33 @@ export default function NotesScreen() {
 
   const handleDeleteNote = useCallback(
     async (id: string) => {
-      const nextNotes = notes.filter((note) => note.id !== id);
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      if (!token) {
+        setErrorMessage('Sessão expirada. Faça login novamente.');
+        return;
+      }
 
-      if (editingNoteId === id) {
-        resetForm();
+      try {
+        await apiFetch(`/notes/${id}`, {
+          method: 'DELETE',
+          token,
+        });
+
+        setNotes((current) => current.filter((note) => note.id !== id));
+
+        if (editingNoteId === id) {
+          resetForm();
+        }
+      } catch (error) {
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível remover a anotação.';
+        console.error('Não foi possível remover a anotação.', error);
+        setErrorMessage(message);
+        await loadNotes({ withSpinner: false });
       }
     },
-    [editingNoteId, notes, persistNotes, resetForm],
+    [editingNoteId, loadNotes, resetForm, token],
   );
 
   const sortedNotes = useMemo(() => {
@@ -351,6 +338,19 @@ export default function NotesScreen() {
     ],
   );
 
+  if (isLoading) {
+    return (
+      <ThemedView
+        style={styles.loadingContainer}
+        lightColor={Colors.light.background}
+        darkColor={Colors.dark.background}
+      >
+        <ActivityIndicator size="large" color={accentColor} />
+        <ThemedText style={styles.loadingLabel}>Carregando anotações...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -364,14 +364,27 @@ export default function NotesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          refreshing={isRefreshing}
+          onRefresh={() => loadNotes({ withSpinner: false })}
           ListHeaderComponent={
             <View style={styles.header}>
               <ThemedText type="title" style={styles.screenTitle}>
                 Anotações
               </ThemedText>
-              <ThemedText style={[styles.lead, { color: mutedText }]}>
+              <ThemedText style={[styles.lead, { color: mutedText }]}> 
                 Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.
               </ThemedText>
+              {errorMessage ? (
+                <ThemedView
+                  style={[styles.errorBox, { borderColor: `${palette.tint}55` }]}
+                  lightColor={`${Colors.light.tint}1A`}
+                  darkColor={`${Colors.dark.tint}26`}
+                >
+                  <ThemedText style={[styles.errorText, { color: palette.tint }]}>
+                    {errorMessage}
+                  </ThemedText>
+                </ThemedView>
+              ) : null}
               <TextInput
                 value={searchTerm}
                 onChangeText={setSearchTerm}
@@ -481,6 +494,15 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     overflow: 'hidden',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  loadingLabel: {
+    fontSize: 16,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -648,5 +670,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 280,
+  },
+  errorBox: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -18,7 +18,9 @@ import {
   type MysterySet,
 } from '@/constants/rosary';
 import { Colors, Fonts } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { apiFetch } from '@/utils/api-client';
 
 const createOpeningSection = (prefix: string) => ({
   title: 'Abertura',
@@ -43,6 +45,26 @@ const createClosingSection = (prefix: string) => ({
     { id: `${prefix}-closing-final-prayers`, label: 'Orações finais', type: 'marker' },
   ],
 });
+
+function normalizeTrackerState(value: any): PrayerBeadTrackerState {
+  const markedIds = Array.isArray(value?.markedIds)
+    ? value.markedIds.filter((entry: unknown) => typeof entry === 'string')
+    : [];
+
+  const roundsCompleted = Number.isInteger(value?.roundsCompleted) && value.roundsCompleted >= 0
+    ? value.roundsCompleted
+    : 0;
+
+  const targetRounds = Number.isInteger(value?.targetRounds) && value.targetRounds >= 1
+    ? value.targetRounds
+    : 1;
+
+  return {
+    markedIds,
+    roundsCompleted,
+    targetRounds,
+  };
+}
 
 const createDecadeBeads = (baseId: string) => [
   { id: `${baseId}-our-father`, label: 'Pai-Nosso', type: 'large' },
@@ -342,8 +364,86 @@ const sequences: PrayerSequence[] = [
 export default function RosariesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const { status, token } = useAuth();
   const [activeModalSequence, setActiveModalSequence] = useState<PrayerSequence | null>(null);
   const [trackerStates, setTrackerStates] = useState<Record<string, PrayerBeadTrackerState>>({});
+  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(saveTimersRef.current).forEach((timer) => {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !token) {
+      setTrackerStates({});
+      return;
+    }
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const response = await apiFetch<{ progress: { sequenceId: string; state: PrayerBeadTrackerState }[] }>('/rosary-progress', {
+          token,
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        const mapped: Record<string, PrayerBeadTrackerState> = {};
+
+        if (Array.isArray(response?.progress)) {
+          response.progress.forEach((entry) => {
+            if (entry && typeof entry.sequenceId === 'string') {
+              mapped[entry.sequenceId] = normalizeTrackerState(entry.state);
+            }
+          });
+        }
+
+        setTrackerStates(mapped);
+      } catch (error) {
+        console.error('Não foi possível carregar o progresso dos terços.', error);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [status, token]);
+
+  const scheduleSaveProgress = useCallback(
+    (sequenceId: string, state: PrayerBeadTrackerState) => {
+      if (!token) {
+        return;
+      }
+
+      const existing = saveTimersRef.current[sequenceId];
+
+      if (existing) {
+        clearTimeout(existing);
+      }
+
+      saveTimersRef.current[sequenceId] = setTimeout(async () => {
+        try {
+          await apiFetch(`/rosary-progress/${sequenceId}`, {
+            method: 'PUT',
+            token,
+            body: state,
+          });
+        } catch (error) {
+          console.error('Não foi possível sincronizar o progresso do terço.', error);
+        }
+      }, 400);
+    },
+    [token],
+  );
 
   const todayMysterySet = getTodayMysterySet(ROSARY_MYSTERY_SETS);
   const dailyRosarySequence = todayMysterySet
@@ -543,6 +643,7 @@ export default function RosariesScreen() {
                       ...current,
                       [activeModalSequence.id]: state,
                     }));
+                    scheduleSaveProgress(activeModalSequence.id, state);
                   }}
                 />
               ) : null}

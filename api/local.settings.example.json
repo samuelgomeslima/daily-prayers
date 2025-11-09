@@ -10,6 +10,9 @@
     "OPENAI_CATECHIST_MAX_TOKENS": "8192",
     "FILE_SEARCH_TOOL": "",
     "OPENAI_TRANSCRIBE_MODEL": "gpt-4o-mini-transcribe",
-    "OPENAI_PROXY_TOKEN": ""
+    "OPENAI_PROXY_TOKEN": "",
+    "DATABASE_URL": "",
+    "JWT_SECRET": "",
+    "JWT_EXPIRES_IN": "7d"
   }
 }

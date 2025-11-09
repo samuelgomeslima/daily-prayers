@@ -1,120 +1,130 @@
-# Welcome to your Expo app 👋
+# Daily Prayers – Guia de desenvolvimento
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo Expo voltado à oração diária com backend em Azure Functions. As principais funcionalidades (anotações, plano de vida, progresso do terço e configurações de modelo) agora dependem de autenticação e são persistidas em um banco PostgreSQL hospedado na [Neon](https://neon.tech/).
 
-## Get started
+## Pré-requisitos
 
-1. Use Node.js 20
+- Node.js **20.19.4 ou superior** (veja [`.nvmrc`](.nvmrc)).
+- Expo CLI (`npm install -g expo-cli`) opcionalmente para uso local.
+- [Azure Functions Core Tools 4](https://learn.microsoft.com/azure/azure-functions/functions-run-local) para executar a API em desenvolvimento.
+- Conta gratuita na Neon (Free Tier) e acesso à CLI `psql`.
 
-   The Expo SDK 54 toolchain bundled with this project requires Node.js **20.19.4 or newer**. If you use [`nvm`](https://github.com/nvm-sh/nvm), you can switch to the correct version with:
+## Instalação das dependências
 
-   ```bash
-   nvm use
-   ```
+```bash
+npm install
+npm install --prefix api
+```
 
-   The repository includes an [`.nvmrc`](.nvmrc) file to simplify selecting the right runtime. If you do not use `nvm`, install Node.js 20.19.4 manually before proceeding.
+## Configuração do banco na Neon (Free Tier)
 
-2. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-3. Configure environment variables
-
-   Copy the example environment file and fill in the Expo variables required by the client app.
+1. Crie uma conta em [neon.tech](https://neon.tech) e inicie um projeto PostgreSQL gratuito.
+2. No painel da Neon, acesse **SQL Editor** e execute o script de schema localizado em [`api/db/schema.sql`](api/db/schema.sql). Se preferir a linha de comando:
 
    ```bash
-   cp .env.example .env
+   # substitua <connection-string> pela string fornecida pela Neon
+   psql "<connection-string>" -f api/db/schema.sql
    ```
 
-   - `EXPO_PUBLIC_CHAT_BASE_URL` (**required**) – full URL of your deployed Static Web App (e.g. `https://white-ground-0a882961e.1.azurestaticapps.net/`).
-   - `EXPO_PUBLIC_API_BASE_URL` (optional) – fallback base URL if the chat URL is not defined.
-   - `EXPO_PUBLIC_SITE_URL` (optional) – secondary fallback used in development builds.
-   - `EXPO_PUBLIC_CATECHIST_BASE_URL` (optional) – dedicated endpoint for the catechist agent; defaults to the chat base URL when omitted.
+3. Ainda no painel, gere uma Connection String no formato `postgres://usuario:senha@servidor/db`. Essa será a variável `DATABASE_URL` usada pela API.
+4. Opcional: defina um branch adicional para testes, caso precise de ambientes separados (o schema funciona em qualquer branch porque utiliza `create table if not exists`).
 
-   If you plan to run the Azure Functions locally, copy the API template and provide the required credentials.
+## Variáveis de ambiente
+
+### Aplicativo Expo (`.env`)
+
+```bash
+cp .env.example .env
+```
+
+- `EXPO_PUBLIC_CHAT_BASE_URL` – URL pública do frontend/Static Web App.
+- `EXPO_PUBLIC_API_BASE_URL` – URL base das Azure Functions (ex.: `https://<sua-app>.azurewebsites.net/api`). Informe esta variável em desenvolvimento para apontar para o Functions host local (ex.: `http://localhost:7071/api`).
+- Outras variáveis opcionais descritas no arquivo de exemplo.
+
+### Azure Functions (`api/local.settings.json`)
+
+```bash
+cp api/local.settings.example.json api/local.settings.json
+```
+
+Preencha os valores obrigatórios:
+
+- `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `OPENAI_CATECHIST_AGENT_ID` etc. conforme já documentado.
+- `DATABASE_URL` – connection string da Neon.
+- `JWT_SECRET` – chave aleatória segura (ex.: `openssl rand -hex 32`).
+- `JWT_EXPIRES_IN` – tempo de expiração (padrão `7d`).
+
+No Azure (produção), configure as mesmas chaves no painel de **Configuration** da Function App. Lembre-se de ativar TLS na Neon (já exigido pela connection string com `sslmode=require`).
+
+## Provisionando o primeiro usuário
+
+As rotas agora exigem autenticação. Crie um usuário inicial via endpoint `POST /api/auth/register` (substitua `<API_BASE>` pela URL configurada):
+
+```bash
+curl -X POST "<API_BASE>/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Administrador",
+        "email": "admin@example.com",
+        "password": "senha-segura"
+      }'
+```
+
+O endpoint retorna `token` e `user`. Use esse token em chamadas subsequentes ou faça login pelo aplicativo (`/auth/login`).
+
+## Executando em desenvolvimento
+
+1. Inicie o backend:
 
    ```bash
-   cp api/local.settings.example.json api/local.settings.json
+   cd api
+   npm install  # caso ainda não tenha feito
+   npm run start
    ```
 
-   - `OPENAI_API_KEY` (**required**) – server-side key used by every OpenAI call.
-   - `OPENAI_CHAT_MODEL` (optional) – defaults to `gpt-4o-mini`.
-   - `OPENAI_CATECHIST_AGENT_ID` (**required for the catechist assistant**) – ID of the workflow created in OpenAI.
-   - `OPENAI_CATECHIST_MODEL` (optional) – defaults to `gpt-4o-mini`.
-   - `OPENAI_CATECHIST_MAX_TOKENS` (optional) – defaults to `8192`.
-   - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
-   - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
-   - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+   O Functions Core Tools sobe em `http://localhost:7071`. Certifique-se de que `DATABASE_URL` e `JWT_SECRET` estão configurados no `local.settings.json`.
 
-   > [!TIP]
-   > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
-
-4. Start the app
+2. Em outro terminal, execute o app Expo:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+   Ao usar dispositivos físicos, defina `EXPO_PUBLIC_API_BASE_URL=http://<IP_LOCAL>:7071/api` para que o app encontre a API.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Autenticação e fluxo do app
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- A tela de login está em [`app/login.tsx`](app/login.tsx). Ela consome o endpoint `/auth/login` e persiste a sessão com [`utils/auth-storage.ts`](utils/auth-storage.ts).
+- Todo o roteamento é protegido em [`app/_layout.tsx`](app/_layout.tsx); apenas usuários autenticados acessam as abas principais.
+- A sessão é revalidada no carregamento via [`contexts/auth-context.tsx`](contexts/auth-context.tsx), que consulta `/auth/profile` e renova o usuário armazenado.
 
-## Guia de implementação
+## Persistência em banco de dados
 
-### Configuração do Assistente Catequista
+| Recurso            | Tela/Hook                                         | Endpoint / Função Azure                     |
+| ------------------ | ------------------------------------------------- | ------------------------------------------- |
+| Anotações          | [`app/notes.tsx`](app/notes.tsx)                  | [`api/src/functions/notes.js`](api/src/functions/notes.js) |
+| Plano de Vida      | [`app/life-plan.tsx`](app/life-plan.tsx)          | [`api/src/functions/life-plan*.js`](api/src/functions/)   |
+| Progresso do Terço | [`app/(tabs)/rosaries.tsx`](app/(tabs)/rosaries.tsx) | [`api/src/functions/rosary-progress.js`](api/src/functions/rosary-progress.js) |
+| Configurações IA   | [`contexts/model-settings-context.tsx`](contexts/model-settings-context.tsx) | [`api/src/functions/model-settings.js`](api/src/functions/model-settings.js) |
 
-1. No portal do OpenAI, copie o **ID do agente** que você criou (Assistants → seu agente → "Agent ID").
-2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis **OPENAI_API_KEY** e **OPENAI_CATECHIST_AGENT_ID** com os valores correspondentes.
-3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando **EXPO_PUBLIC_CATECHIST_BASE_URL** (ou reutilize **EXPO_PUBLIC_CHAT_BASE_URL**) apontando para a URL pública da Static Web App.
-4. Publique as alterações. Depois que as funções forem atualizadas, abra a aba do assistente e envie uma mensagem para validar se o agente está respondendo conforme o esperado.
+Todos os handlers usam o helper de autenticação [`api/src/lib/auth-middleware.js`](api/src/lib/auth-middleware.js) para validar o token JWT antes de acessar o banco Neon.
 
-### Recursos oficiais do Vaticano
+## Deploy
 
-- Acesse diretamente o portal [vatican.va](https://www.vatican.va/content/vatican/pt.html) para consultar constituições apostólicas, homilias e documentos litúrgicos da Santa Sé, preservando a experiência original publicada pelo Vaticano.
-- As notícias em português do [vaticannews.va](https://www.vaticannews.va/pt.html) são abertas no navegador do dispositivo, evitando bloqueios de incorporação e seguindo as diretrizes canônicas de uso dos portais oficiais.
+1. Execute `npm install --prefix api` em sua máquina local para gerar/atualizar o `package-lock.json` (o ambiente desta documentação não possui acesso à registry da npm).
+2. Faça o deploy das funções para o Azure (por exemplo, via GitHub Actions configurada pela Static Web App).
+3. Defina as variáveis de ambiente (`DATABASE_URL`, `JWT_SECRET`, `OPENAI_*`) tanto na Function App quanto na Static Web App.
+4. Certifique-se de que a Static Web App define `EXPO_PUBLIC_API_BASE_URL` apontando para a função publicada.
 
-### Fluxo da Liturgia Diária (Canção Nova)
+## Dicas adicionais
 
-- Sincronização diária com [liturgia.cancaonova.com](https://liturgia.cancaonova.com/pb/) garantindo que leituras, salmos e orações sigam a publicação oficial disponibilizada pela comunidade Canção Nova.
-- Implementamos cache local apenas para uso offline de curto prazo e exibimos aviso sobre a procedência da fonte em todas as telas relacionadas.
+- A Neon exige SSL; mantenha `sslmode=require` na connection string.
+- Para resetar a base, basta executar novamente `api/db/schema.sql` ou truncar tabelas manualmente (`truncate table ... cascade`).
+- O token expira conforme `JWT_EXPIRES_IN`. Quando expirar, o app retornará à tela de login.
 
-### Santo do Dia com cache e créditos
+## Recursos úteis
 
-- Dados carregados de portais autorizados (ex.: [Canção Nova](https://santo.cancaonova.com/)) e armazenados por 24 horas. Após esse período, uma nova requisição é realizada e os créditos são mantidos visíveis no card do santo.
-- Implementamos fallback para quando não há conteúdo atualizado, exibindo mensagem amigável e link direto para a fonte.
+- [Documentação Expo](https://docs.expo.dev/)
+- [Azure Functions – desenvolver localmente](https://learn.microsoft.com/azure/azure-functions/functions-develop-local)
+- [Neon Docs](https://neon.tech/docs)
 
-### Cadastro manual de horários de missa
-
-- Como não existe API nacional, adotamos formulários de envio no aplicativo. As entradas ficam associadas à paróquia e são revisadas antes da publicação.
-- Também oferecemos deep links para os guias oficiais da Arquidiocese de Belo Horizonte, com horários publicados em [missadiariabh.com/missadiaria](https://www.missadiariabh.com/missadiaria) e as agendas de confissões em [missadiariabh.com/confissoes](https://www.missadiariabh.com/confissoes) para complementar a busca do usuário.
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

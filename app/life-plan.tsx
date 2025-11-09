@@ -1,7 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,10 +16,8 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const LIFE_PLAN_STORAGE_FILE = FileSystem.documentDirectory
-  ? `${FileSystem.documentDirectory}life-plan.json`
-  : null;
+import { useAuth } from '@/hooks/use-auth';
+import { apiFetch, ApiError } from '@/utils/api-client';
 
 type PracticeFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -129,13 +126,6 @@ const DEFAULT_PRACTICES: ReadonlyArray<BasePractice> = [
   },
 ];
 
-function createDefaultPlan(): LifePlanPractice[] {
-  return DEFAULT_PRACTICES.map((practice) => ({
-    ...practice,
-    completedPeriods: [],
-  }));
-}
-
 function isPracticeFrequency(value: unknown): value is PracticeFrequency {
   return value === 'daily' || value === 'weekly' || value === 'monthly';
 }
@@ -187,113 +177,50 @@ export default function LifePlanScreen() {
   const [formDescription, setFormDescription] = useState('');
   const [formFrequency, setFormFrequency] = useState<PracticeFrequency>('daily');
   const [formError, setFormError] = useState<string | null>(null);
+  const { status, token } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
-
-  const persistPlanToStorage = useCallback((nextPlan: LifePlanPractice[]) => {
-    if (!LIFE_PLAN_STORAGE_FILE) {
-      return Promise.resolve();
+  const loadPlan = useCallback(async () => {
+    if (!token) {
+      return;
     }
 
-    const runSave = async () => {
-      try {
-        const payload: LifePlanStorage = {
-          version: 1,
-          updatedAt: new Date().toISOString(),
-          practices: nextPlan,
-        };
-        await FileSystem.writeAsStringAsync(LIFE_PLAN_STORAGE_FILE, JSON.stringify(payload));
-        setStorageWarning(null);
-      } catch (error) {
-        console.error('Failed to save life plan', error);
-        setStorageWarning('Não foi possível salvar as alterações localmente. Elas podem ser perdidas.');
-      }
-    };
+    setLoading(true);
 
-    const queuedSave = saveQueueRef.current
-      .catch(() => {
-        // Swallow errors from previous saves to keep the queue intact.
-      })
-      .then(runSave);
-
-    saveQueueRef.current = queuedSave;
-
-    return queuedSave;
-  }, []);
+    try {
+      const response = await apiFetch<{ practices: LifePlanPractice[] }>('/life-plan', { token });
+      const hydrated = Array.isArray(response?.practices)
+        ? response.practices.map(normalizePractice)
+        : DEFAULT_PRACTICES.map((practice) => ({ ...practice, completedPeriods: [] }));
+      setPlan(hydrated);
+      setStorageWarning(null);
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível carregar o plano de vida. Exibindo o conjunto padrão.';
+      console.error('Failed to load life plan', error);
+      setStorageWarning(message);
+      setPlan(DEFAULT_PRACTICES.map((practice) => ({ ...practice, completedPeriods: [] })));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
-    let isMounted = true;
+    if (status !== 'authenticated') {
+      setPlan([]);
+      setLoading(false);
+      setStorageWarning(null);
+      return;
+    }
 
-    const loadPlan = async () => {
-      if (!LIFE_PLAN_STORAGE_FILE) {
-        if (isMounted) {
-          setPlan(createDefaultPlan());
-          setStorageWarning(
-            'O armazenamento local não está disponível neste dispositivo. O plano será mantido apenas durante esta sessão.',
-          );
-          setLoading(false);
-        }
-        return;
-      }
+    if (!token) {
+      return;
+    }
 
-      try {
-        const info = await FileSystem.getInfoAsync(LIFE_PLAN_STORAGE_FILE);
-
-        if (!info.exists) {
-          const defaults = createDefaultPlan();
-          if (isMounted) {
-            setPlan(defaults);
-          }
-          await persistPlanToStorage(defaults);
-        } else {
-          const content = await FileSystem.readAsStringAsync(LIFE_PLAN_STORAGE_FILE);
-          const stored: LifePlanStorage | null = content ? JSON.parse(content) : null;
-
-          if (stored?.version === 1 && Array.isArray(stored.practices)) {
-            const hydrated = stored.practices.map(normalizePractice);
-            if (isMounted) {
-              setPlan(hydrated);
-            }
-          } else {
-            const defaults = createDefaultPlan();
-            if (isMounted) {
-              setPlan(defaults);
-            }
-            await persistPlanToStorage(defaults);
-            setStorageWarning('Não foi possível carregar o plano salvo. Um novo plano foi criado.');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load life plan', error);
-        const defaults = createDefaultPlan();
-        if (isMounted) {
-          setPlan(defaults);
-          setStorageWarning('Houve um erro ao carregar o plano salvo. Um novo plano padrão foi iniciado.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadPlan();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [persistPlanToStorage]);
-
-  const applyPlanUpdate = useCallback(
-    (updater: (current: LifePlanPractice[]) => LifePlanPractice[]) => {
-      setPlan((current) => {
-        const nextPlan = updater(current);
-        void persistPlanToStorage(nextPlan);
-        return nextPlan;
-      });
-    },
-    [persistPlanToStorage],
-  );
+    void loadPlan();
+  }, [loadPlan, status, token]);
 
   const isPracticeCompleted = useCallback((practice: LifePlanPractice) => {
     const periodKey = getPeriodKey(practice.frequency);
@@ -322,64 +249,140 @@ export default function LifePlanScreen() {
   }, [plan.length, completedCount]);
 
   const handleTogglePractice = useCallback(
-    (practiceId: string) => {
-      applyPlanUpdate((current) =>
-        current.map((practice) => {
-          if (practice.id !== practiceId) {
-            return practice;
-          }
+    async (practice: LifePlanPractice) => {
+      if (!token) {
+        setStorageWarning('Sessão expirada. Faça login novamente.');
+        return;
+      }
 
-          const periodKey = getPeriodKey(practice.frequency);
-          const alreadyCompleted = practice.completedPeriods.includes(periodKey);
-          const updatedPeriods = alreadyCompleted
-            ? practice.completedPeriods.filter((entry) => entry !== periodKey)
-            : [...practice.completedPeriods, periodKey];
+      const periodKey = getPeriodKey(practice.frequency);
+      const alreadyCompleted = practice.completedPeriods.includes(periodKey);
+      const updatedPeriods = alreadyCompleted
+        ? practice.completedPeriods.filter((entry) => entry !== periodKey)
+        : [...practice.completedPeriods, periodKey];
 
-          return {
-            ...practice,
-            completedPeriods: updatedPeriods,
-          };
-        }),
+      setPlan((current) =>
+        current.map((item) =>
+          item.id === practice.id ? { ...item, completedPeriods: updatedPeriods } : item,
+        ),
       );
+
+      setIsSyncing(true);
+
+      try {
+        const response = await apiFetch<{ practice: LifePlanPractice }>(`/life-plan/${practice.id}`, {
+          method: 'PUT',
+          token,
+          body: { completedPeriods: updatedPeriods },
+        });
+
+        const normalized = normalizePractice(response.practice);
+        setPlan((current) =>
+          current.map((item) => (item.id === practice.id ? normalized : item)),
+        );
+        setStorageWarning(null);
+      } catch (error) {
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível atualizar a prática. As alterações podem não ter sido salvas.';
+        console.error('Failed to update practice', error);
+        setStorageWarning(message);
+        await loadPlan();
+      } finally {
+        setIsSyncing(false);
+      }
     },
-    [applyPlanUpdate],
+    [loadPlan, token],
   );
 
   const handleRemovePractice = useCallback(
-    (practiceId: string) => {
-      applyPlanUpdate((current) => current.filter((practice) => practice.id !== practiceId));
+    async (practice: LifePlanPractice) => {
+      if (!token) {
+        setStorageWarning('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      setIsSyncing(true);
+
+      try {
+        await apiFetch(`/life-plan/${practice.id}`, {
+          method: 'DELETE',
+          token,
+        });
+
+        setPlan((current) => current.filter((item) => item.id !== practice.id));
+        setStorageWarning(null);
+      } catch (error) {
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível remover a prática.';
+        console.error('Failed to remove practice', error);
+        setStorageWarning(message);
+        await loadPlan();
+      } finally {
+        setIsSyncing(false);
+      }
     },
-    [applyPlanUpdate],
+    [loadPlan, token],
   );
 
   const confirmRemovePractice = useCallback(
     (practice: LifePlanPractice) => {
       Alert.alert('Remover prática', `Deseja remover "${practice.title}" do seu plano de vida?`, [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Remover', style: 'destructive', onPress: () => handleRemovePractice(practice.id) },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => {
+            void handleRemovePractice(practice);
+          },
+        },
       ]);
     },
     [handleRemovePractice],
   );
 
   const handleResetProgress = useCallback(() => {
+    if (!token) {
+      setStorageWarning('Sessão expirada. Faça login novamente.');
+      return;
+    }
+
     Alert.alert('Reiniciar progresso', 'Deseja limpar todas as marcações do período atual?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Reiniciar',
         style: 'destructive',
-        onPress: () =>
-          applyPlanUpdate((current) =>
-            current.map((practice) => ({
-              ...practice,
-              completedPeriods: [],
-            })),
-          ),
+        onPress: async () => {
+          setIsSyncing(true);
+          try {
+            await apiFetch('/life-plan/reset', {
+              method: 'POST',
+              token,
+            });
+            setPlan((current) =>
+              current.map((practice) => ({ ...practice, completedPeriods: [] })),
+            );
+            setStorageWarning(null);
+          } catch (error) {
+            const message =
+              error instanceof ApiError
+                ? error.message
+                : 'Não foi possível reiniciar as marcações agora.';
+            console.error('Failed to reset practices', error);
+            setStorageWarning(message);
+            await loadPlan();
+          } finally {
+            setIsSyncing(false);
+          }
+        },
       },
     ]);
-  }, [applyPlanUpdate]);
+  }, [loadPlan, token]);
 
-  const handleAddPractice = useCallback(() => {
+  const handleAddPractice = useCallback(async () => {
     const trimmedTitle = formTitle.trim();
     const trimmedDescription = formDescription.trim();
 
@@ -388,20 +391,43 @@ export default function LifePlanScreen() {
       return;
     }
 
-    const newPractice: LifePlanPractice = {
-      id: `custom-${Date.now()}`,
-      title: trimmedTitle,
-      description: trimmedDescription ? trimmedDescription : undefined,
-      frequency: formFrequency,
-      completedPeriods: [],
-    };
+    if (!token) {
+      setStorageWarning('Sessão expirada. Faça login novamente.');
+      return;
+    }
 
-    applyPlanUpdate((current) => [...current, newPractice]);
-    setFormTitle('');
-    setFormDescription('');
-    setFormFrequency('daily');
-    setFormError(null);
-  }, [applyPlanUpdate, formDescription, formFrequency, formTitle]);
+    setIsSyncing(true);
+
+    try {
+      const response = await apiFetch<{ practice: LifePlanPractice }>('/life-plan', {
+        method: 'POST',
+        token,
+        body: {
+          title: trimmedTitle,
+          description: trimmedDescription ? trimmedDescription : undefined,
+          frequency: formFrequency,
+        },
+      });
+
+      const normalized = normalizePractice(response.practice);
+      setPlan((current) => [...current, normalized]);
+      setFormTitle('');
+      setFormDescription('');
+      setFormFrequency('daily');
+      setFormError(null);
+      setStorageWarning(null);
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível adicionar a prática.';
+      console.error('Failed to add practice', error);
+      setStorageWarning(message);
+      await loadPlan();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [formDescription, formFrequency, formTitle, loadPlan, token]);
 
   const placeholderColor = colorScheme === 'dark' ? 'rgba(244, 251, 255, 0.48)' : 'rgba(4, 48, 73, 0.45)';
   const overlayColor = colorScheme === 'dark' ? Colors.dark.overlay : Colors.light.overlay;
@@ -464,6 +490,12 @@ export default function LifePlanScreen() {
             <MaterialIcons name="refresh" size={20} color={palette.tint} />
             <ThemedText style={styles.resetButtonText}>Reiniciar marcações</ThemedText>
           </Pressable>
+          {isSyncing ? (
+            <View style={styles.syncStatus}>
+              <ActivityIndicator size="small" color={palette.tint} />
+              <ThemedText style={[styles.syncLabel, { color: palette.tint }]}>Sincronizando alterações...</ThemedText>
+            </View>
+          ) : null}
         </View>
 
         {storageWarning ? (
@@ -538,7 +570,7 @@ export default function LifePlanScreen() {
                 ) : null}
                 <ThemedText style={styles.practiceHint}>{FREQUENCY_HINTS[practice.frequency]}</ThemedText>
                 <Pressable
-                  onPress={() => handleTogglePractice(practice.id)}
+                      onPress={() => handleTogglePractice(practice)}
                   style={({ pressed }) => [
                     styles.completionButton,
                     {
@@ -655,8 +687,10 @@ export default function LifePlanScreen() {
                   );
                 })}
               </View>
-              <Pressable
-                onPress={handleAddPractice}
+                <Pressable
+                  onPress={() => {
+                    void handleAddPractice();
+                  }}
                 style={({ pressed }) => [
                   styles.addButton,
                   {
@@ -753,6 +787,16 @@ const styles = StyleSheet.create({
   resetButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  syncStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  syncLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   warningBox: {
     borderRadius: 16,
