@@ -135,6 +135,19 @@ You can start developing by editing the files inside the **app** directory. This
      using (auth.uid() = user_id)
      with check (auth.uid() = user_id);
 
+   -- Progresso das orações dos terços
+   create table if not exists public.rosary_progress (
+     user_id uuid not null references auth.users (id) on delete cascade,
+     sequence_id text not null,
+     state jsonb not null default '{}'::jsonb,
+     updated_at timestamptz not null default timezone('utc', now()),
+     primary key (user_id, sequence_id)
+   );
+   alter table public.rosary_progress enable row level security;
+   create policy "Rosary progress per user" on public.rosary_progress
+     using (auth.uid() = user_id)
+     with check (auth.uid() = user_id);
+
    -- Histórico de conversas com a IA
    create table if not exists public.chat_messages (
      id uuid primary key default gen_random_uuid(),

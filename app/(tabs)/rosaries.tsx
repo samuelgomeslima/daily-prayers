@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -19,6 +19,8 @@ import {
 } from '@/constants/rosary';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/lib/supabase';
 
 const createOpeningSection = (prefix: string) => ({
   title: 'Abertura',
@@ -339,16 +341,203 @@ const sequences: PrayerSequence[] = [
   missionarySequence,
 ];
 
+type SupabaseRosaryProgressRow = {
+  sequence_id: string | null;
+  state: unknown;
+};
+
+type UnknownRecord = Record<string, unknown>;
+
+const SAVE_DEBOUNCE_MS = 500;
+
+function parseRosaryState(input: unknown): UnknownRecord {
+  if (!input) {
+    return {};
+  }
+
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as UnknownRecord;
+      }
+    } catch (error) {
+      console.warn('Não foi possível interpretar o estado salvo do terço.', error);
+    }
+    return {};
+  }
+
+  if (typeof input === 'object' && !Array.isArray(input)) {
+    return input as UnknownRecord;
+  }
+
+  return {};
+}
+
+function mapRosaryProgressRow(row: SupabaseRosaryProgressRow): PrayerBeadTrackerState {
+  const state = parseRosaryState(row.state);
+
+  const markedSource = Array.isArray(state.markedIds as unknown)
+    ? (state.markedIds as unknown[])
+    : Array.isArray(state.marked_ids as unknown)
+      ? (state.marked_ids as unknown[])
+      : [];
+
+  const markedIds = Array.from(
+    new Set(markedSource.filter((value): value is string => typeof value === 'string')),
+  );
+
+  const roundsRaw =
+    typeof (state.roundsCompleted as unknown) === 'number'
+      ? (state.roundsCompleted as number)
+      : typeof (state.rounds_completed as unknown) === 'number'
+        ? (state.rounds_completed as number)
+        : 0;
+
+  const roundsCompleted = Number.isFinite(roundsRaw)
+    ? Math.max(0, Math.trunc(roundsRaw))
+    : 0;
+
+  const targetRaw =
+    typeof (state.targetRounds as unknown) === 'number'
+      ? (state.targetRounds as number)
+      : typeof (state.target_rounds as unknown) === 'number'
+        ? (state.target_rounds as number)
+        : roundsCompleted || 1;
+
+  const targetRounds = Number.isFinite(targetRaw)
+    ? Math.max(1, Math.trunc(targetRaw), roundsCompleted)
+    : Math.max(1, roundsCompleted);
+
+  return {
+    markedIds,
+    roundsCompleted,
+    targetRounds,
+  };
+}
+
 export default function RosariesScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const errorColor = colorScheme === 'dark' ? '#FCA5A5' : '#B91C1C';
+  const { user } = useAuth();
   const [activeModalSequence, setActiveModalSequence] = useState<PrayerSequence | null>(null);
   const [trackerStates, setTrackerStates] = useState<Record<string, PrayerBeadTrackerState>>({});
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+
+  const clearPendingSaves = useCallback(() => {
+    Object.values(saveTimeouts.current).forEach((timeoutId) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
+    saveTimeouts.current = {};
+  }, []);
+
+  useEffect(() => clearPendingSaves, [clearPendingSaves]);
+
+  useEffect(() => {
+    clearPendingSaves();
+
+    let isMounted = true;
+
+    if (!user) {
+      setTrackerStates({});
+      setSyncError(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const loadProgress = async () => {
+      try {
+        const rows = await supabase.fetchRosaryProgress(user.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const mapped = (rows as SupabaseRosaryProgressRow[]).reduce(
+          (acc, row) => {
+            if (row && typeof row.sequence_id === 'string' && row.sequence_id.trim()) {
+              acc[row.sequence_id] = mapRosaryProgressRow(row);
+            }
+            return acc;
+          },
+          {} as Record<string, PrayerBeadTrackerState>,
+        );
+
+        setTrackerStates(mapped);
+        setSyncError(null);
+      } catch (error) {
+        console.error('Não foi possível carregar o progresso dos terços.', error);
+        if (isMounted) {
+          setSyncError('Não foi possível sincronizar o progresso dos terços. Tente novamente mais tarde.');
+        }
+      }
+    };
+
+    void loadProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, clearPendingSaves]);
+
+  const scheduleSave = useCallback(
+    (sequenceId: string, state: PrayerBeadTrackerState) => {
+      if (!user) {
+        return;
+      }
+
+      const currentTimeout = saveTimeouts.current[sequenceId];
+
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+      }
+
+      saveTimeouts.current[sequenceId] = setTimeout(() => {
+        void supabase
+          .upsertRosaryProgress({
+            userId: user.id,
+            sequenceId,
+            state,
+            updatedAt: new Date().toISOString(),
+          })
+          .then(() => {
+            setSyncError(null);
+          })
+          .catch((error) => {
+            console.error('Não foi possível salvar o progresso do terço.', error);
+            setSyncError('Não foi possível salvar o progresso do terço. Verifique sua conexão.');
+          })
+          .finally(() => {
+            saveTimeouts.current[sequenceId] = null;
+          });
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [user],
+  );
+
+  const handleTrackerStateChange = useCallback(
+    (sequenceId: string, state: PrayerBeadTrackerState) => {
+      setTrackerStates((current) => ({
+        ...current,
+        [sequenceId]: state,
+      }));
+
+      scheduleSave(sequenceId, state);
+    },
+    [scheduleSave],
+  );
 
   const todayMysterySet = getTodayMysterySet(ROSARY_MYSTERY_SETS);
   const dailyRosarySequence = todayMysterySet
     ? createDailyRosarySequence(todayMysterySet)
     : null;
+
+  const activeSequenceId = activeModalSequence?.id ?? null;
 
   const openSequenceModal = (sequence: PrayerSequence) => {
     setActiveModalSequence(sequence);
@@ -459,6 +648,10 @@ export default function RosariesScreen() {
           atual.
         </ThemedText>
 
+        {syncError ? (
+          <ThemedText style={[styles.syncError, { color: errorColor }]}>{syncError}</ThemedText>
+        ) : null}
+
         {sequences.map((sequence) => (
           <ThemedView
             key={sequence.id}
@@ -535,14 +728,13 @@ export default function RosariesScreen() {
             <ScrollView contentContainerStyle={styles.modalContent}>
               {activeModalSequence ? (
                 <PrayerBeadTracker
-                  key={activeModalSequence.id}
+                  key={activeSequenceId ?? undefined}
                   sequence={activeModalSequence}
-                  initialState={trackerStates[activeModalSequence.id]}
+                  initialState={activeSequenceId ? trackerStates[activeSequenceId] : undefined}
                   onStateChange={(state) => {
-                    setTrackerStates((current) => ({
-                      ...current,
-                      [activeModalSequence.id]: state,
-                    }));
+                    if (activeSequenceId) {
+                      handleTrackerStateChange(activeSequenceId, state);
+                    }
                   }}
                 />
               ) : null}
@@ -604,6 +796,10 @@ const styles = StyleSheet.create({
   },
   sectionDescription: {
     lineHeight: 22,
+  },
+  syncError: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   dailyActionCard: {
     marginTop: 20,

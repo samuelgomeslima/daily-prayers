@@ -31,6 +31,12 @@ export type SupabaseSession = {
   user: SupabaseUser;
 };
 
+export type RosaryProgressState = {
+  markedIds: string[];
+  roundsCompleted: number;
+  targetRounds: number;
+};
+
 const SESSION_STORAGE_KEY = '@daily-prayers/supabase-session';
 const SESSION_FILE = 'supabase-session.json';
 
@@ -508,6 +514,56 @@ export class SupabaseService {
         method: 'DELETE',
       }
     );
+  }
+
+  async fetchRosaryProgress(userId: string) {
+    const data = (await this.restRequest(
+      `/rosary_progress?select=sequence_id,state,updated_at&user_id=eq.${encodeURIComponent(userId)}`
+    )) as any[] | null;
+
+    return Array.isArray(data) ? data : [];
+  }
+
+  async upsertRosaryProgress(payload: {
+    userId: string;
+    sequenceId: string;
+    state: RosaryProgressState;
+    updatedAt?: string;
+  }) {
+    const markedIds = Array.isArray(payload.state.markedIds)
+      ? payload.state.markedIds.filter((value) => typeof value === 'string')
+      : [];
+
+    const roundsCandidate = Number(payload.state.roundsCompleted);
+    const normalizedRounds = Number.isFinite(roundsCandidate)
+      ? Math.max(0, Math.trunc(roundsCandidate))
+      : 0;
+
+    const targetCandidate = Number(payload.state.targetRounds);
+    const normalizedTarget = Number.isFinite(targetCandidate)
+      ? Math.max(normalizedRounds, 1, Math.trunc(targetCandidate))
+      : Math.max(normalizedRounds, 1);
+
+    const body = [
+      {
+        user_id: payload.userId,
+        sequence_id: payload.sequenceId,
+        state: {
+          markedIds,
+          roundsCompleted: normalizedRounds,
+          targetRounds: normalizedTarget,
+        },
+        updated_at: payload.updatedAt ?? new Date().toISOString(),
+      },
+    ];
+
+    await this.restRequest('/rosary_progress', {
+      method: 'POST',
+      headers: {
+        Prefer: 'return=minimal, resolution=merge-duplicates',
+      },
+      body: JSON.stringify(body),
+    });
   }
 
   async fetchLifePlan(userId: string) {
