@@ -16,7 +16,7 @@ import { Colors } from '@/constants/theme';
 import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { resolveChatEndpoint } from '@/utils/chat-endpoint';
+import { useAuth } from '@/contexts/auth-context';
 
 const MODEL_LABELS = {
   'gpt-5-mini': 'GPT-5 Mini',
@@ -91,28 +91,15 @@ export default function SettingsScreen() {
     }
   }, []);
 
+  const { fetchWithAuth } = useAuth();
+
   const checkAvailability = useCallback(async () => {
     safeSetAvailability({ status: 'checking' });
 
-    const endpoint = resolveChatEndpoint();
-
-    if (!endpoint) {
-      safeSetAvailability({
-        status: 'unavailable',
-        message:
-          'O endpoint da IA não está configurado. Defina EXPO_PUBLIC_CHAT_BASE_URL antes de usar os assistentes.',
-        kind: 'config',
-      });
-      return;
-    }
-
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetchWithAuth('/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: '{}',
+        json: {},
       });
 
       if (response.ok || response.status === 400) {
@@ -152,13 +139,17 @@ export default function SettingsScreen() {
         kind: 'error',
       });
     } catch {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível conectar-se à IA. Verifique sua conexão e tente novamente.';
       safeSetAvailability({
         status: 'unavailable',
-        message: 'Não foi possível conectar-se à IA. Verifique sua conexão e tente novamente.',
+        message,
         kind: 'network',
       });
     }
-  }, [safeSetAvailability]);
+  }, [fetchWithAuth, safeSetAvailability]);
 
   useEffect(() => {
     void checkAvailability();

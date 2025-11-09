@@ -53,29 +53,31 @@ function resolveExpoHost(constants) {
   return null;
 }
 
-function resolveChatEndpoint(options = {}) {
+function resolveApiEndpoint(path, options = {}) {
   const env = options.env ?? process.env ?? {};
   const constants = options.constants ?? loadExpoConstants();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const apiPath = normalizedPath.startsWith('/api/') ? normalizedPath : `/api${normalizedPath}`;
 
   if (env.EXPO_OS === 'web') {
-    return '/api/chat';
+    return apiPath;
   }
 
   const envBaseUrl =
-    env.EXPO_PUBLIC_CHAT_BASE_URL ??
     env.EXPO_PUBLIC_API_BASE_URL ??
+    env.EXPO_PUBLIC_CHAT_BASE_URL ??
     env.EXPO_PUBLIC_SITE_URL ??
-    constants?.expoConfig?.extra?.chatBaseUrl ??
     constants?.expoConfig?.extra?.apiBaseUrl ??
-    constants?.manifest2?.extra?.chatBaseUrl ??
+    constants?.expoConfig?.extra?.chatBaseUrl ??
     constants?.manifest2?.extra?.apiBaseUrl ??
-    constants?.manifest?.extra?.chatBaseUrl ??
+    constants?.manifest2?.extra?.chatBaseUrl ??
     constants?.manifest?.extra?.apiBaseUrl ??
+    constants?.manifest?.extra?.chatBaseUrl ??
     '';
 
   if (envBaseUrl) {
     try {
-      return new URL('/api/chat', envBaseUrl).toString();
+      return new URL(apiPath, envBaseUrl).toString();
     } catch {
       // If the base URL is malformed we fall back to the Expo host resolution below.
     }
@@ -84,13 +86,18 @@ function resolveChatEndpoint(options = {}) {
   const host = resolveExpoHost(constants);
 
   if (host) {
-    return `http://${host}:${EXP_DEFAULT_PORT}/api/chat`;
+    return `http://${host}:${EXP_DEFAULT_PORT}${apiPath}`;
   }
 
   return null;
 }
 
+function resolveChatEndpoint(options = {}) {
+  return resolveApiEndpoint('/chat', options);
+}
+
 module.exports = {
+  resolveApiEndpoint,
   resolveChatEndpoint,
   // Exported for testing purposes to ensure the Expo host logic works as expected.
   _internal: {

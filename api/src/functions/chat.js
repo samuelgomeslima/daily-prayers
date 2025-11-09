@@ -1,5 +1,7 @@
 const { app } = require('@azure/functions');
 
+const { requireUser } = require('../utils/require-user');
+
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const AVAILABLE_MODELS = new Set(['gpt-5-mini', 'gpt-4o-mini']);
@@ -16,6 +18,12 @@ app.http('chat', {
   methods: ['POST'],
   authLevel: 'anonymous',
   handler: async (request, context) => {
+    const authResult = await requireUser(request, context);
+
+    if (authResult.error) {
+      return authResult.error;
+    }
+
     if (!OPENAI_API_KEY) {
       context.warn('Missing OPENAI_API_KEY environment variable.');
       return {

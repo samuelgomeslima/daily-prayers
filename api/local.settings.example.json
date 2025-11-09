@@ -10,6 +10,14 @@
     "OPENAI_CATECHIST_MAX_TOKENS": "8192",
     "FILE_SEARCH_TOOL": "",
     "OPENAI_TRANSCRIBE_MODEL": "gpt-4o-mini-transcribe",
-    "OPENAI_PROXY_TOKEN": ""
+    "OPENAI_PROXY_TOKEN": "",
+    "AUTH_JWT_SECRET": "",
+    "COSMOS_DB_ENDPOINT": "",
+    "COSMOS_DB_KEY": "",
+    "COSMOS_DB_DATABASE_ID": "daily-prayers",
+    "COSMOS_DB_USERS_CONTAINER": "users",
+    "COSMOS_DB_NOTES_CONTAINER": "notes",
+    "COSMOS_DB_LIFE_PLANS_CONTAINER": "lifePlans",
+    "COSMOS_DB_MODEL_SETTINGS_CONTAINER": "modelSettings"
   }
 }

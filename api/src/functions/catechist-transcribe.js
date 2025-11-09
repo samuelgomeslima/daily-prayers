@@ -1,12 +1,19 @@
 const { app } = require('@azure/functions');
 const { Buffer } = require('node:buffer');
 
+const { requireUser } = require('../utils/require-user');
+
 app.http('catechistTranscribe', {
   methods: ['GET', 'POST'],
   authLevel: 'anonymous',
   route: 'catechist-transcribe',
   handler: async (request, context) => {
     const method = (request?.method || 'GET').toUpperCase();
+    const authResult = await requireUser(request, context);
+
+    if (authResult.error) {
+      return authResult.error;
+    }
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     const OPENAI_TRANSCRIBE_MODEL =
       process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-mini-transcribe';

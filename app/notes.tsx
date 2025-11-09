@@ -1,6 +1,6 @@
-import { documentDirectory, getInfoAsync, readAsStringAsync, writeAsStringAsync } from 'expo-file-system';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   ListRenderItem,
@@ -14,7 +14,8 @@ import {
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -25,38 +26,37 @@ type Note = {
   updatedAt: string;
 };
 
-const NOTES_STORAGE_KEY = '@daily-prayers/notes';
-const NOTES_STORAGE_FILE = 'notes.json';
-
-function getStorageUri() {
-  if (Platform.OS === 'web') {
+function normalizeNote(payload: any): Note | null {
+  if (!payload || typeof payload !== 'object') {
     return null;
   }
 
-  if (!documentDirectory) {
+  const id = typeof payload.id === 'string' ? payload.id : null;
+
+  if (!id) {
     return null;
   }
 
-  return `${documentDirectory}${NOTES_STORAGE_FILE}`;
+  const title = typeof payload.title === 'string' ? payload.title : '';
+  const content = typeof payload.content === 'string' ? payload.content : '';
+  const updatedAt = typeof payload.updatedAt === 'string' ? payload.updatedAt : new Date().toISOString();
+
+  return {
+    id,
+    title,
+    content,
+    updatedAt,
+  };
 }
 
-function sanitizeNotes(payload: unknown): Note[] {
+function normalizeNotes(payload: unknown): Note[] {
   if (!Array.isArray(payload)) {
     return [];
   }
 
   return payload
-    .filter((item): item is Partial<Note> & { id: unknown } => typeof item === 'object' && item !== null)
-    .map((item) => ({
-      id: typeof item.id === 'string' ? item.id : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      title: typeof item.title === 'string' ? item.title : '',
-      content: typeof item.content === 'string' ? item.content : '',
-      updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : new Date().toISOString(),
-    }));
-}
-
-function createNoteId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    .map((item) => normalizeNote(item))
+    .filter((item): item is Note => item !== null);
 }
 
 function formatUpdatedAt(value: string) {
@@ -86,12 +86,17 @@ function formatUpdatedAt(value: string) {
 }
 
 export default function NotesScreen() {
+  const { fetchWithAuth } = useAuth();
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -108,83 +113,55 @@ export default function NotesScreen() {
   const inputBackground = surface;
   const inputBorder = borderColor;
 
-  useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      try {
-        if (Platform.OS === 'web') {
-          if (typeof window === 'undefined' || !isMounted) {
-            return;
-          }
-
-          const stored = window.localStorage.getItem(NOTES_STORAGE_KEY);
-
-          if (!stored) {
-            return;
-          }
-
-          const parsed = JSON.parse(stored) as unknown;
-          const sanitized = sanitizeNotes(parsed);
-
-          if (isMounted) {
-            setNotes(sanitized);
-          }
-
-          return;
-        }
-
-        const storageUri = getStorageUri();
-
-        if (!storageUri) {
-          return;
-        }
-
-        const fileInfo = await getInfoAsync(storageUri);
-
-        if (!fileInfo.exists) {
-          return;
-        }
-
-        const content = await readAsStringAsync(storageUri);
-        const parsed = JSON.parse(content) as unknown;
-        const sanitized = sanitizeNotes(parsed);
-
-        if (isMounted) {
-          setNotes(sanitized);
-        }
-      } catch (error) {
-        console.error('Não foi possível carregar as anotações salvas.', error);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const persistNotes = useCallback(async (payload: Note[]) => {
+  const loadNotes = useCallback(async () => {
     try {
-      if (Platform.OS === 'web') {
-        if (typeof window === 'undefined') {
-          return;
+      const response = await fetchWithAuth('/notes', { method: 'GET' });
+
+      if (!response.ok) {
+        const fallbackMessage = 'Não foi possível carregar suas anotações agora. Tente novamente em instantes.';
+        let message = fallbackMessage;
+
+        try {
+          const payload = (await response.json()) as { error?: { message?: unknown } };
+          const candidate = payload?.error?.message;
+          if (typeof candidate === 'string' && candidate.trim()) {
+            message = candidate.trim();
+          }
+        } catch {
+          // Ignore JSON parsing errors and keep the fallback message.
         }
 
-        window.localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(payload));
-        return;
+        throw new Error(message);
       }
 
-      const storageUri = getStorageUri();
-
-      if (!storageUri) {
-        return;
-      }
-
-      await writeAsStringAsync(storageUri, JSON.stringify(payload));
+      const data = (await response.json()) as { notes?: unknown };
+      const parsed = normalizeNotes(data?.notes);
+      setNotes(parsed);
+      setErrorMessage(null);
     } catch (error) {
-      console.error('Não foi possível persistir as anotações.', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar suas anotações agora. Tente novamente em instantes.';
+      setErrorMessage(message);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [fetchWithAuth]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    void loadNotes();
+  }, [loadNotes]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await loadNotes();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadNotes]);
 
   const resetForm = useCallback(() => {
     setTitle('');
@@ -201,63 +178,100 @@ export default function NotesScreen() {
     }
 
     setIsSaving(true);
-    const timestamp = new Date().toISOString();
+    const payload = {
+      title: normalizedTitle,
+      content: normalizedContent,
+    };
 
     try {
-      let nextNotes: Note[];
-
       if (editingNoteId) {
-        nextNotes = notes.map((note) =>
-          note.id === editingNoteId
-            ? { ...note, title: normalizedTitle, content: normalizedContent, updatedAt: timestamp }
-            : note,
+        const response = await fetchWithAuth(`/notes/${editingNoteId}`, {
+          method: 'PUT',
+          json: payload,
+        });
+
+        if (!response.ok) {
+          throw new Error('Não foi possível atualizar a anotação selecionada.');
+        }
+
+        const data = (await response.json()) as { note?: unknown };
+        const updated = normalizeNote(data?.note);
+
+        if (!updated) {
+          throw new Error('Resposta inválida ao atualizar a anotação.');
+        }
+
+        setNotes((current) =>
+          current.map((note) => (note.id === updated.id ? { ...note, ...updated } : note)),
         );
       } else {
-        const newNote: Note = {
-          id: createNoteId(),
-          title: normalizedTitle,
-          content: normalizedContent,
-          updatedAt: timestamp,
-        };
-        nextNotes = [...notes, newNote];
+        const response = await fetchWithAuth('/notes', {
+          method: 'POST',
+          json: payload,
+        });
+
+        if (!response.ok) {
+          throw new Error('Não foi possível salvar a nova anotação.');
+        }
+
+        const data = (await response.json()) as { note?: unknown };
+        const created = normalizeNote(data?.note);
+
+        if (!created) {
+          throw new Error('Resposta inválida ao criar a anotação.');
+        }
+
+        setNotes((current) => [...current, created]);
       }
 
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
       resetForm();
+      setErrorMessage(null);
     } catch (error) {
-      console.error('Não foi possível salvar a anotação.', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível salvar a anotação agora. Tente novamente em instantes.';
+      setErrorMessage(message);
     } finally {
       setIsSaving(false);
     }
-  }, [content, editingNoteId, notes, persistNotes, resetForm, title]);
+  }, [content, editingNoteId, fetchWithAuth, resetForm, title]);
 
-  const handleSelectNote = useCallback(
-    (note: Note) => {
-      setEditingNoteId(note.id);
-      setTitle(note.title);
-      setContent(note.content);
-    },
-    [],
-  );
+  const handleSelectNote = useCallback((note: Note) => {
+    setEditingNoteId(note.id);
+    setTitle(note.title);
+    setContent(note.content);
+  }, []);
 
   const handleDeleteNote = useCallback(
     async (id: string) => {
-      const nextNotes = notes.filter((note) => note.id !== id);
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      try {
+        const response = await fetchWithAuth(`/notes/${id}`, { method: 'DELETE' });
 
-      if (editingNoteId === id) {
-        resetForm();
+        if (!response.ok && response.status !== 404) {
+          throw new Error('Não foi possível remover a anotação.');
+        }
+
+        setNotes((current) => current.filter((note) => note.id !== id));
+
+        if (editingNoteId === id) {
+          resetForm();
+        }
+
+        setErrorMessage(null);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível remover a anotação agora. Tente novamente em instantes.';
+        setErrorMessage(message);
       }
     },
-    [editingNoteId, notes, persistNotes, resetForm],
+    [editingNoteId, fetchWithAuth, resetForm],
   );
 
   const sortedNotes = useMemo(() => {
-    return [...notes].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    );
+    return [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [notes]);
 
   const filteredNotes = useMemo(() => {
@@ -321,151 +335,109 @@ export default function NotesScreen() {
                 },
                 pressed && styles.deleteButtonPressed,
               ]}>
-              <ThemedText
-                style={[
-                  styles.deleteButtonLabel,
-                  { color: colorScheme === 'dark' ? '#FFB4C2' : '#C81F4A' },
-                ]}
-              >
-                Excluir
-              </ThemedText>
+              <ThemedText style={styles.deleteButtonLabel}>Apagar</ThemedText>
             </Pressable>
-            {isActive ? (
-              <ThemedText style={[styles.editingBadge, { color: accentColor }]}>Editando</ThemedText>
-            ) : null}
           </View>
         </Pressable>
       );
     },
-    [
-      accentColor,
-      borderColor,
-      colorScheme,
-      editingNoteId,
-      handleDeleteNote,
-      handleSelectNote,
-      mutedText,
-      overlayColor,
-      palette,
-      surface,
-    ],
+    [accentColor, borderColor, colorScheme, editingNoteId, handleDeleteNote, handleSelectNote, mutedText, overlayColor, palette.tint, surface],
   );
+
+  const keyExtractor = useCallback((item: Note) => item.id, []);
+
+  const emptyComponent = useMemo(() => {
+    if (isLoading) {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={palette.tint} />
+          <ThemedText style={[styles.emptyStateText, { color: mutedText }]}>Carregando anotações...</ThemedText>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyState}>
+        <HolySpiritSymbol size={56} color={palette.tint} />
+        <ThemedText style={[styles.emptyStateText, { color: mutedText }]}>Comece registrando suas inspirações espirituais aqui.</ThemedText>
+      </View>
+    );
+  }, [isLoading, mutedText, palette.tint]);
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.flex}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
+      behavior={Platform.select({ ios: 'padding', android: undefined })}
+      style={styles.flexContainer}>
       <ThemedView style={styles.container}>
-        <HolySpiritSymbol size={200} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
-        <HolySpiritSymbol size={160} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
+        <View style={styles.formContainer}>
+          <ThemedText style={styles.formTitle}>Nova anotação</ThemedText>
+          <View style={styles.inputGroup}>
+            <TextInput
+              accessibilityLabel="Título da anotação"
+              placeholder="Título"
+              placeholderTextColor={placeholderColor}
+              value={title}
+              onChangeText={setTitle}
+              style={[styles.input, { color: inputText, backgroundColor: inputBackground, borderColor: inputBorder }]}
+            />
+            <TextInput
+              accessibilityLabel="Conteúdo da anotação"
+              placeholder="Escreva aqui suas inspirações e resoluções..."
+              placeholderTextColor={placeholderColor}
+              value={content}
+              onChangeText={setContent}
+              multiline
+              numberOfLines={4}
+              style={[styles.textarea, { color: inputText, backgroundColor: inputBackground, borderColor: inputBorder }]}
+            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleSaveNote}
+              disabled={isSaveDisabled}
+              style={({ pressed }) => [
+                styles.saveButton,
+                {
+                  backgroundColor: isSaveDisabled ? surfaceMuted : accentColor,
+                  shadowColor: `${palette.tint}33`,
+                },
+                pressed && !isSaveDisabled ? styles.saveButtonPressed : null,
+              ]}>
+              {isSaving ? (
+                <ActivityIndicator color={colorScheme === 'dark' ? '#0B1226' : '#FFFFFF'} />
+              ) : (
+                <ThemedText style={styles.saveButtonLabel}>
+                  {editingNoteId ? 'Atualizar anotação' : 'Salvar anotação'}
+                </ThemedText>
+              )}
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.listHeader}>
+          <ThemedText style={styles.listTitle}>Minhas anotações</ThemedText>
+          <TextInput
+            placeholder="Buscar nas anotações"
+            placeholderTextColor={placeholderColor}
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            style={[styles.searchInput, { color: inputText, backgroundColor: inputBackground, borderColor: inputBorder }]}
+          />
+        </View>
+
+        {errorMessage ? (
+          <ThemedText style={[styles.errorMessage, { color: palette.negative }]}>{errorMessage}</ThemedText>
+        ) : null}
+
         <FlatList
           data={filteredNotes}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={
-            <View style={styles.header}>
-              <ThemedText type="title" style={styles.screenTitle}>
-                Anotações
-              </ThemedText>
-              <ThemedText style={[styles.lead, { color: mutedText }]}>
-                Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.
-              </ThemedText>
-              <TextInput
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                placeholder="Pesquisar anotações"
-                placeholderTextColor={placeholderColor}
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
-                ]}
-                autoCapitalize="sentences"
-                autoCorrect
-                accessibilityLabel="Pesquisar anotações"
-                returnKeyType="search"
-              />
-              <ThemedView
-                style={styles.formCard}
-                lightColor={Colors.light.surface}
-                darkColor={Colors.dark.surface}>
-                <ThemedText type="subtitle" style={styles.formTitle}>
-                  {editingNoteId ? 'Editar anotação' : 'Nova anotação'}
-                </ThemedText>
-                <TextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder="Título da anotação"
-                  placeholderTextColor={placeholderColor}
-                  style={[
-                    styles.input,
-                    { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
-                  ]}
-                  accessibilityLabel="Título da anotação"
-                  autoCapitalize="sentences"
-                  autoCorrect
-                />
-                <TextInput
-                  value={content}
-                  onChangeText={setContent}
-                  placeholder="Escreva aqui suas anotações"
-                  placeholderTextColor={placeholderColor}
-                  style={[
-                    styles.textarea,
-                    { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
-                  ]}
-                  accessibilityLabel="Conteúdo da anotação"
-                  multiline
-                  textAlignVertical="top"
-                />
-                <View style={styles.formActions}>
-                  {editingNoteId ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={resetForm}
-                      style={({ pressed }) => [
-                        styles.secondaryButton,
-                        {
-                          borderColor,
-                          backgroundColor: surfaceMuted,
-                        },
-                        pressed && styles.secondaryButtonPressed,
-                      ]}>
-                      <ThemedText style={styles.secondaryButtonLabel}>Cancelar</ThemedText>
-                    </Pressable>
-                  ) : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={handleSaveNote}
-                    disabled={isSaveDisabled}
-                    style={({ pressed }) => [
-                      styles.primaryButton,
-                      { backgroundColor: accentColor },
-                      pressed && !isSaveDisabled && styles.primaryButtonPressed,
-                      isSaveDisabled && styles.primaryButtonDisabled,
-                    ]}>
-                    <ThemedText style={styles.primaryButtonLabel}>
-                      {editingNoteId ? 'Atualizar anotação' : 'Salvar anotação'}
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              </ThemedView>
-            </View>
-          }
-          ListEmptyComponent={
-            <ThemedView
-              style={styles.emptyState}
-              lightColor={Colors.light.surfaceMuted}
-              darkColor={Colors.dark.surfaceMuted}>
-              <ThemedText style={styles.emptyStateTitle}>Nenhuma anotação encontrada</ThemedText>
-              <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
-                {searchTerm
-                  ? 'Tente ajustar os termos de busca para localizar uma anotação existente.'
-                  : 'Escreva sua primeira anotação acima para organizar pensamentos e inspirações.'}
-              </ThemedText>
-            </ThemedView>
-          }
+          ListEmptyComponent={emptyComponent}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
           keyboardShouldPersistTaps="handled"
         />
       </ThemedView>
@@ -474,179 +446,146 @@ export default function NotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
+  flexContainer: {
     flex: 1,
   },
   container: {
     flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
+    padding: 20,
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 56,
-    gap: 16,
+  formContainer: {
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    backgroundColor: 'transparent',
   },
-  header: {
-    gap: 16,
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
   },
-  symbolTop: {
-    position: 'absolute',
-    top: -60,
-    right: -40,
-  },
-  symbolBottom: {
-    position: 'absolute',
-    bottom: -70,
-    left: -30,
-    transform: [{ scaleX: -1 }],
-  },
-  screenTitle: {
-    fontFamily: Fonts.serif,
-  },
-  lead: {
-    lineHeight: 20,
+  inputGroup: {
+    gap: 12,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
   },
   textarea: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 120,
+    paddingTop: 12,
+    paddingBottom: 16,
     fontSize: 16,
+    minHeight: 120,
+    textAlignVertical: 'top',
   },
-  formCard: {
-    borderRadius: 16,
-    padding: 20,
-    gap: 16,
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 2,
+  saveButton: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  formTitle: {
-    fontFamily: Fonts.rounded,
+  saveButtonPressed: {
+    opacity: 0.9,
   },
-  formActions: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'flex-end',
-  },
-  primaryButton: {
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  primaryButtonPressed: {
-    opacity: 0.85,
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonLabel: {
+  saveButtonLabel: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
   },
-  secondaryButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 20,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 12,
+    opacity: 0.5,
+  },
+  listHeader: {
+    gap: 12,
+  },
+  listTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  searchInput: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 10,
+    fontSize: 15,
   },
-  secondaryButtonPressed: {
-    opacity: 0.7,
-  },
-  secondaryButtonLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+  listContent: {
+    paddingVertical: 16,
+    gap: 16,
   },
   noteCard: {
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
     padding: 16,
-    gap: 8,
-    borderWidth: 1,
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   noteCardPressed: {
-    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
   },
   noteCardActive: {
-    shadowOpacity: 0.25,
-    elevation: 2,
+    borderWidth: 2,
   },
   noteCardHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    marginBottom: 12,
   },
   noteTitle: {
-    flex: 1,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+    marginRight: 12,
   },
   noteMeta: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    fontSize: 13,
   },
   noteContent: {
     fontSize: 15,
     lineHeight: 20,
+    marginBottom: 12,
   },
   noteActions: {
-    marginTop: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   deleteButton: {
-    paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
+    paddingVertical: 6,
   },
   deleteButtonPressed: {
-    opacity: 0.7,
+    opacity: 0.85,
   },
   deleteButtonLabel: {
+    fontSize: 14,
     fontWeight: '600',
-  },
-  editingBadge: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
   },
   emptyState: {
-    paddingVertical: 48,
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 18,
-    paddingHorizontal: 24,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    justifyContent: 'center',
+    paddingVertical: 64,
+    gap: 16,
   },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  emptyStateSubtitle: {
-    textAlign: 'center',
+  emptyStateText: {
+    fontSize: 15,
     lineHeight: 20,
+    textAlign: 'center',
     maxWidth: 280,
+  },
+  errorMessage: {
+    marginTop: 12,
+    marginBottom: 4,
   },
 });

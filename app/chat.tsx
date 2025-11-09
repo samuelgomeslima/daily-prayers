@@ -18,7 +18,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { resolveChatEndpoint } from '@/utils/chat-endpoint';
+import { useAuth } from '@/contexts/auth-context';
 
 type ChatMessage = {
   id: string;
@@ -37,8 +37,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 const SYSTEM_PROMPT = `Você é um assistente católico chamado "Companheiro de Fé". Responda sempre com fidelidade ao magistério da Igreja, cite referências litúrgicas quando possível e ofereça sugestões de orações, novenas, terços e estudos de aprofundamento. Traga indicações pastorais com tom acolhedor e respeitoso.`;
 
-const CHAT_ENDPOINT = resolveChatEndpoint();
-
 export default function ChatScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
@@ -49,6 +47,7 @@ export default function ChatScreen() {
 
   const palette = Colors[colorScheme];
   const { chatModel } = useModelSettings();
+  const { fetchWithAuth } = useAuth();
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
@@ -57,21 +56,6 @@ export default function ChatScreen() {
       return;
     }
     
-    const endpoint = CHAT_ENDPOINT;
-
-    if (!endpoint) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-assistant-error`,
-          role: 'assistant',
-          content:
-            'Não foi possível iniciar a conversa. Verifique a configuração da variável EXPO_PUBLIC_CHAT_BASE_URL e tente novamente.',
-        },
-      ]);
-      return;
-    }
-
     const userMessage: ChatMessage = {
       id: `${Date.now()}-user`,
       role: 'user',
@@ -105,16 +89,13 @@ export default function ChatScreen() {
         { role: 'user', content: trimmed },
       ];
 
-      const response = await fetch(endpoint, {
+      const response = await fetchWithAuth('/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        json: {
           messages: payloadMessages,
           temperature: 0.6,
           model: chatModel,
-        }),
+        },
       });
 
       if (!response.ok) {
@@ -172,7 +153,7 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [chatModel, input, messages]);
+  }, [chatModel, fetchWithAuth, input, messages]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {

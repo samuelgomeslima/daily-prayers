@@ -8,16 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Platform } from 'react-native';
-import {
-  documentDirectory,
-  getInfoAsync,
-  readAsStringAsync,
-  writeAsStringAsync,
-} from 'expo-file-system';
 
-const STORAGE_KEY = '@daily-prayers/model-settings';
-const STORAGE_FILE = 'model-settings.json';
+import { useAuth } from '@/contexts/auth-context';
 
 export const AVAILABLE_MODELS = ['gpt-5-mini', 'gpt-4o-mini'] as const;
 
@@ -42,35 +34,19 @@ const DEFAULT_SETTINGS: ModelSettingsState = {
   chatModel: 'gpt-4o-mini',
 };
 
-const ModelSettingsContext = createContext<ModelSettingsContextValue | undefined>(
-  undefined
-);
-
-function getStorageUri() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!documentDirectory) {
-    return null;
-  }
-
-  return `${documentDirectory}${STORAGE_FILE}`;
-}
+const ModelSettingsContext = createContext<ModelSettingsContextValue | undefined>(undefined);
 
 function sanitizeModel(value: unknown): ModelOption | null {
   if (typeof value !== 'string') {
     return null;
   }
 
-  return AVAILABLE_MODELS.includes(value as ModelOption)
-    ? (value as ModelOption)
-    : null;
+  return AVAILABLE_MODELS.includes(value as ModelOption) ? (value as ModelOption) : null;
 }
 
-function sanitizeSettings(payload: unknown): ModelSettingsState | null {
+function sanitizeSettings(payload: unknown): ModelSettingsState {
   if (typeof payload !== 'object' || payload === null) {
-    return null;
+    return DEFAULT_SETTINGS;
   }
 
   const candidate = payload as Partial<Record<keyof ModelSettingsState, unknown>>;
@@ -83,70 +59,9 @@ function sanitizeSettings(payload: unknown): ModelSettingsState | null {
   };
 }
 
-async function readStoredSettings(): Promise<ModelSettingsState | null> {
-  try {
-    if (Platform.OS === 'web') {
-      if (typeof window === 'undefined') {
-        return null;
-      }
-
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-
-      if (!stored) {
-        return null;
-      }
-
-      const parsed = JSON.parse(stored) as unknown;
-      return sanitizeSettings(parsed);
-    }
-
-    const uri = getStorageUri();
-
-    if (!uri) {
-      return null;
-    }
-
-    const info = await getInfoAsync(uri);
-
-    if (!info.exists) {
-      return null;
-    }
-
-    const stored = await readAsStringAsync(uri);
-    const parsed = JSON.parse(stored) as unknown;
-    return sanitizeSettings(parsed);
-  } catch (error) {
-    console.warn('Não foi possível carregar as configurações de modelos.', error);
-    return null;
-  }
-}
-
-async function persistSettings(settings: ModelSettingsState) {
-  try {
-    const serialized = JSON.stringify(settings);
-
-    if (Platform.OS === 'web') {
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      window.localStorage.setItem(STORAGE_KEY, serialized);
-      return;
-    }
-
-    const uri = getStorageUri();
-
-    if (!uri) {
-      return;
-    }
-
-    await writeAsStringAsync(uri, serialized);
-  } catch (error) {
-    console.warn('Não foi possível salvar as configurações de modelos.', error);
-  }
-}
-
 export function ModelSettingsProvider({ children }: { children: ReactNode }) {
+  const { status, user, fetchWithAuth } = useAuth();
+
   const [settings, setSettings] = useState<ModelSettingsState>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const hasHydratedRef = useRef(false);
@@ -154,51 +69,108 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    (async () => {
-      const stored = await readStoredSettings();
+    if (status !== 'authenticated' || !user) {
+      setSettings(DEFAULT_SETTINGS);
+      setIsLoading(false);
+      hasHydratedRef.current = false;
+      return () => {
+        isMounted = false;
+      };
+    }
 
-      if (stored && isMounted) {
-        setSettings(stored);
-      }
+    setIsLoading(true);
+    hasHydratedRef.current = false;
 
-      if (isMounted) {
-        setIsLoading(false);
+    const load = async () => {
+      try {
+        const response = await fetchWithAuth('/model-settings', { method: 'GET' });
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (response.status === 404) {
+          const createResponse = await fetchWithAuth('/model-settings', {
+            method: 'PUT',
+            json: DEFAULT_SETTINGS,
+          });
+
+          if (!isMounted) {
+            return;
+          }
+
+          if (createResponse.ok) {
+            const created = await createResponse.json();
+            setSettings(sanitizeSettings(created?.settings ?? created));
+            hasHydratedRef.current = true;
+          } else {
+            setSettings(DEFAULT_SETTINGS);
+            hasHydratedRef.current = true;
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          setSettings(DEFAULT_SETTINGS);
+          hasHydratedRef.current = true;
+          return;
+        }
+
+        const data = await response.json();
+        setSettings(sanitizeSettings(data?.settings ?? data));
         hasHydratedRef.current = true;
+      } catch (error) {
+        console.warn('Não foi possível carregar as configurações de modelos.', error);
+        if (isMounted) {
+          setSettings(DEFAULT_SETTINGS);
+          hasHydratedRef.current = true;
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    })();
+    };
+
+    void load();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [fetchWithAuth, status, user?.id]);
 
   const updateSettings = useCallback(
     (updater: (previous: ModelSettingsState) => ModelSettingsState) => {
       setSettings((prev) => {
         const next = updater(prev);
 
-        if (hasHydratedRef.current) {
-          void persistSettings(next);
+        if (hasHydratedRef.current && status === 'authenticated') {
+          void fetchWithAuth('/model-settings', {
+            method: 'PUT',
+            json: next,
+          }).catch((error) => {
+            console.warn('Não foi possível sincronizar as configurações de modelos.', error);
+          });
         }
 
         return next;
       });
     },
-    []
+    [fetchWithAuth, status],
   );
 
   const setCatechistModel = useCallback(
     (model: ModelOption) => {
       updateSettings((prev) => ({ ...prev, catechistModel: model }));
     },
-    [updateSettings]
+    [updateSettings],
   );
 
   const setChatModel = useCallback(
     (model: ModelOption) => {
       updateSettings((prev) => ({ ...prev, chatModel: model }));
     },
-    [updateSettings]
+    [updateSettings],
   );
 
   const value = useMemo<ModelSettingsContextValue>(
@@ -210,14 +182,10 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       isLoading,
       availableModels: AVAILABLE_MODELS,
     }),
-    [isLoading, setCatechistModel, setChatModel, settings]
+    [isLoading, setCatechistModel, setChatModel, settings],
   );
 
-  return (
-    <ModelSettingsContext.Provider value={value}>
-      {children}
-    </ModelSettingsContext.Provider>
-  );
+  return <ModelSettingsContext.Provider value={value}>{children}</ModelSettingsContext.Provider>;
 }
 
 export function useModelSettings() {

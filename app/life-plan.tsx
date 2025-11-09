@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -16,11 +15,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const LIFE_PLAN_STORAGE_FILE = FileSystem.documentDirectory
-  ? `${FileSystem.documentDirectory}life-plan.json`
-  : null;
 
 type PracticeFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -188,87 +184,81 @@ export default function LifePlanScreen() {
   const [formFrequency, setFormFrequency] = useState<PracticeFrequency>('daily');
   const [formError, setFormError] = useState<string | null>(null);
 
+  const { fetchWithAuth } = useAuth();
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const persistPlanToStorage = useCallback((nextPlan: LifePlanPractice[]) => {
-    if (!LIFE_PLAN_STORAGE_FILE) {
-      return Promise.resolve();
-    }
+  const persistPlanToServer = useCallback(
+    (nextPlan: LifePlanPractice[]) => {
+      const runSave = async () => {
+        try {
+          await fetchWithAuth('/life-plan', {
+            method: 'PUT',
+            json: {
+              version: 1,
+              practices: nextPlan,
+            },
+          });
+          setStorageWarning(null);
+        } catch (error) {
+          console.error('Failed to save life plan', error);
+          setStorageWarning('Não foi possível sincronizar o plano com o servidor. As alterações podem ser perdidas.');
+          throw error;
+        }
+      };
 
-    const runSave = async () => {
-      try {
-        const payload: LifePlanStorage = {
-          version: 1,
-          updatedAt: new Date().toISOString(),
-          practices: nextPlan,
-        };
-        await FileSystem.writeAsStringAsync(LIFE_PLAN_STORAGE_FILE, JSON.stringify(payload));
-        setStorageWarning(null);
-      } catch (error) {
-        console.error('Failed to save life plan', error);
-        setStorageWarning('Não foi possível salvar as alterações localmente. Elas podem ser perdidas.');
-      }
-    };
+      const queuedSave = saveQueueRef.current
+        .catch(() => {
+          // Swallow errors from previous saves to keep the queue intact.
+        })
+        .then(runSave);
 
-    const queuedSave = saveQueueRef.current
-      .catch(() => {
-        // Swallow errors from previous saves to keep the queue intact.
-      })
-      .then(runSave);
+      saveQueueRef.current = queuedSave;
 
-    saveQueueRef.current = queuedSave;
-
-    return queuedSave;
-  }, []);
+      return queuedSave;
+    },
+    [fetchWithAuth],
+  );
 
   useEffect(() => {
     let isMounted = true;
 
     const loadPlan = async () => {
-      if (!LIFE_PLAN_STORAGE_FILE) {
-        if (isMounted) {
-          setPlan(createDefaultPlan());
-          setStorageWarning(
-            'O armazenamento local não está disponível neste dispositivo. O plano será mantido apenas durante esta sessão.',
-          );
-          setLoading(false);
-        }
-        return;
-      }
+      setLoading(true);
 
       try {
-        const info = await FileSystem.getInfoAsync(LIFE_PLAN_STORAGE_FILE);
+        const response = await fetchWithAuth('/life-plan', { method: 'GET' });
 
-        if (!info.exists) {
-          const defaults = createDefaultPlan();
-          if (isMounted) {
-            setPlan(defaults);
-          }
-          await persistPlanToStorage(defaults);
-        } else {
-          const content = await FileSystem.readAsStringAsync(LIFE_PLAN_STORAGE_FILE);
-          const stored: LifePlanStorage | null = content ? JSON.parse(content) : null;
+        if (!isMounted) {
+          return;
+        }
 
-          if (stored?.version === 1 && Array.isArray(stored.practices)) {
-            const hydrated = stored.practices.map(normalizePractice);
-            if (isMounted) {
-              setPlan(hydrated);
-            }
-          } else {
-            const defaults = createDefaultPlan();
-            if (isMounted) {
-              setPlan(defaults);
-            }
-            await persistPlanToStorage(defaults);
-            setStorageWarning('Não foi possível carregar o plano salvo. Um novo plano foi criado.');
-          }
+        if (!response.ok) {
+          throw new Error('Não foi possível carregar o plano salvo.');
+        }
+
+        const data = (await response.json()) as { plan?: LifePlanStorage | null };
+        const stored = data?.plan ?? null;
+
+        if (stored?.version === 1 && Array.isArray(stored.practices)) {
+          const hydrated = stored.practices.map(normalizePractice);
+          setPlan(hydrated);
+          setStorageWarning(null);
+          return;
+        }
+
+        const defaults = createDefaultPlan();
+        setPlan(defaults);
+        setStorageWarning(null);
+        try {
+          await persistPlanToServer(defaults);
+        } catch {
+          // The warning is already handled inside persistPlanToServer.
         }
       } catch (error) {
         console.error('Failed to load life plan', error);
-        const defaults = createDefaultPlan();
         if (isMounted) {
-          setPlan(defaults);
-          setStorageWarning('Houve um erro ao carregar o plano salvo. Um novo plano padrão foi iniciado.');
+          setPlan(createDefaultPlan());
+          setStorageWarning('Não foi possível carregar o plano salvo. Um plano padrão foi iniciado.');
         }
       } finally {
         if (isMounted) {
@@ -277,22 +267,22 @@ export default function LifePlanScreen() {
       }
     };
 
-    loadPlan();
+    void loadPlan();
 
     return () => {
       isMounted = false;
     };
-  }, [persistPlanToStorage]);
+  }, [fetchWithAuth, persistPlanToServer]);
 
   const applyPlanUpdate = useCallback(
     (updater: (current: LifePlanPractice[]) => LifePlanPractice[]) => {
       setPlan((current) => {
         const nextPlan = updater(current);
-        void persistPlanToStorage(nextPlan);
+        void persistPlanToServer(nextPlan);
         return nextPlan;
       });
     },
-    [persistPlanToStorage],
+    [persistPlanToServer],
   );
 
   const isPracticeCompleted = useCallback((practice: LifePlanPractice) => {

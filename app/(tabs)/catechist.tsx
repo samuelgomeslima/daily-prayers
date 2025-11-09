@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +16,7 @@ import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -60,81 +60,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
       'Paz e bem! Sou o Assistente Catequista, treinado com base nos livros “A Fé Explicada”, “Teologia do Corpo”, “História de uma Alma” e “Os 4 Temperamentos no Amor”. Faça suas perguntas sobre a fé católica e indique como deseja aprofundar seus estudos.',
   },
 ];
-
-const resolveExpoHost = () => {
-  const extractHost = (raw?: string | null) => {
-    if (!raw) {
-      return null;
-    }
-
-    try {
-      const value = raw.includes('://') ? raw : `http://${raw}`;
-      return new URL(value).hostname;
-    } catch {
-      return null;
-    }
-  };
-
-  const candidates = [
-    Constants.expoConfig?.extra?.expoGo?.debuggerHost,
-    Constants.manifest2?.extra?.expoGo?.debuggerHost,
-    Constants.manifest?.debuggerHost,
-    Constants.expoConfig?.hostUri,
-    Constants.expoConfig?.extra?.expoGo?.hostUri,
-    Constants.manifest2?.extra?.expoGo?.hostUri,
-    Constants.manifest?.hostUri,
-  ];
-
-  for (const candidate of candidates) {
-    const host = extractHost(candidate);
-
-    if (host) {
-      return host;
-    }
-  }
-
-  return null;
-};
-
-const createApiEndpoint = (path: string) => {
-  if (process.env.EXPO_OS === 'web') {
-    return path;
-  }
-
-  const envBaseUrl =
-    process.env.EXPO_PUBLIC_CATECHIST_BASE_URL ??
-    process.env.EXPO_PUBLIC_CHAT_BASE_URL ??
-    process.env.EXPO_PUBLIC_API_BASE_URL ??
-    process.env.EXPO_PUBLIC_SITE_URL ??
-    Constants.expoConfig?.extra?.catechistBaseUrl ??
-    Constants.expoConfig?.extra?.chatBaseUrl ??
-    Constants.expoConfig?.extra?.apiBaseUrl ??
-    Constants.manifest2?.extra?.catechistBaseUrl ??
-    Constants.manifest2?.extra?.chatBaseUrl ??
-    Constants.manifest2?.extra?.apiBaseUrl ??
-    Constants.manifest?.extra?.catechistBaseUrl ??
-    Constants.manifest?.extra?.chatBaseUrl ??
-    Constants.manifest?.extra?.apiBaseUrl ??
-    '';
-
-  if (envBaseUrl) {
-    return new URL(path, envBaseUrl).toString();
-  }
-
-  const host = resolveExpoHost();
-
-  if (!host) {
-    return null;
-  }
-
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    return `http://127.0.0.1:4280${path}`;
-  }
-
-  return `http://${host}:4280${path}`;
-};
-
-const CATECHIST_ENDPOINT = createApiEndpoint('/api/catechist-agent');
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -302,27 +227,13 @@ export default function CatechistScreen() {
 
   const palette = Colors[colorScheme];
   const { catechistModel } = useModelSettings();
+  const { fetchWithAuth } = useAuth();
 
   const sendMessageFromText = useCallback(
     async (rawText: string) => {
       const trimmed = rawText.trim();
 
       if (!trimmed) {
-        return false;
-      }
-
-      const endpoint = CATECHIST_ENDPOINT;
-
-      if (!endpoint) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assistant-error`,
-            role: 'assistant',
-            content:
-              'Não foi possível iniciar a conversa. Verifique as variáveis EXPO_PUBLIC_CATECHIST_BASE_URL ou EXPO_PUBLIC_CHAT_BASE_URL antes de tentar novamente.',
-          },
-        ]);
         return false;
       }
 
@@ -357,16 +268,13 @@ export default function CatechistScreen() {
 
           for (let attempt = 0; attempt < MAX_REQUEST_ATTEMPTS; attempt += 1) {
             try {
-              const response = await fetch(endpoint, {
+              const response = await fetchWithAuth('/catechist-agent', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+                json: {
                   input_as_text: trimmed,
                   conversationId: conversationId ?? undefined,
                   model: catechistModel,
-                }),
+                },
               });
 
               if (!response.ok) {
@@ -480,7 +388,7 @@ export default function CatechistScreen() {
         setIsSending(false);
       }
     },
-    [catechistModel, conversationId]
+    [catechistModel, conversationId, fetchWithAuth]
   );
 
   const sendMessage = useCallback(async () => {

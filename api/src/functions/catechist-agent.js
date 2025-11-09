@@ -1,6 +1,8 @@
 const { app } = require('@azure/functions');
 const { Agent, Runner, fileSearchTool } = require('@openai/agents');
 
+const { requireUser } = require('../utils/require-user');
+
 const WORKFLOW_ID = process.env.OPENAI_CATECHIST_AGENT_ID ?? null;
 const FILE_SEARCH_TOOL = process.env.FILE_SEARCH_TOOL ?? null;
 
@@ -367,6 +369,12 @@ app.http('catechistAgent', {
   authLevel: 'anonymous',
   route: 'catechist-agent',
   handler: async (request, context) => {
+    const authResult = await requireUser(request, context);
+
+    if (authResult.error) {
+      return authResult.error;
+    }
+
     let body;
 
     try {

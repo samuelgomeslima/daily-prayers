@@ -45,8 +45,12 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `OPENAI_CATECHIST_MODEL` (optional) – defaults to `gpt-4o-mini`.
    - `OPENAI_CATECHIST_MAX_TOKENS` (optional) – defaults to `8192`.
    - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
-   - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
-   - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+  - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
+  - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+  - `AUTH_JWT_SECRET` (**required**) – chave usada para assinar os tokens JWT enviados ao aplicativo.
+  - `COSMOS_DB_ENDPOINT` e `COSMOS_DB_KEY` (**required**) – endpoint e chave primária da conta do Azure Cosmos DB.
+  - `COSMOS_DB_DATABASE_ID` (opcional) – banco de dados que armazena os documentos da aplicação. O valor padrão é `daily-prayers`.
+  - `COSMOS_DB_USERS_CONTAINER`, `COSMOS_DB_NOTES_CONTAINER`, `COSMOS_DB_LIFE_PLANS_CONTAINER`, `COSMOS_DB_MODEL_SETTINGS_CONTAINER` (opcionais) – nomes dos contêineres do Cosmos DB. Os valores padrão são `users`, `notes`, `lifePlans` e `modelSettings`.
 
    > [!TIP]
    > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
@@ -74,6 +78,76 @@ You can start developing by editing the files inside the **app** directory. This
 2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis **OPENAI_API_KEY** e **OPENAI_CATECHIST_AGENT_ID** com os valores correspondentes.
 3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando **EXPO_PUBLIC_CATECHIST_BASE_URL** (ou reutilize **EXPO_PUBLIC_CHAT_BASE_URL**) apontando para a URL pública da Static Web App.
 4. Publique as alterações. Depois que as funções forem atualizadas, abra a aba do assistente e envie uma mensagem para validar se o agente está respondendo conforme o esperado.
+
+### Banco de dados Azure Cosmos DB (Free Tier)
+
+1. Escolha um grupo de recursos e região (ex.: `brazilsouth`) e crie a conta gratuita do Cosmos DB:
+
+   ```bash
+   az group create --name daily-prayers-rg --location brazilsouth
+   az cosmosdb create \
+     --name daily-prayers-account \
+     --resource-group daily-prayers-rg \
+     --locations regionName=brazilsouth failoverPriority=0 \
+     --default-consistency-level Session \
+     --kind GlobalDocumentDB \
+     --enable-free-tier true
+   ```
+
+2. Crie o banco de dados SQL e os quatro contêineres utilizados pela aplicação:
+
+   ```bash
+   az cosmosdb sql database create \
+     --account-name daily-prayers-account \
+     --resource-group daily-prayers-rg \
+     --name daily-prayers
+
+   az cosmosdb sql container create \
+     --account-name daily-prayers-account \
+     --resource-group daily-prayers-rg \
+     --database-name daily-prayers \
+     --name users \
+     --partition-key-path "/id"
+
+   az cosmosdb sql container create \
+     --account-name daily-prayers-account \
+     --resource-group daily-prayers-rg \
+     --database-name daily-prayers \
+     --name notes \
+     --partition-key-path "/userId"
+
+   az cosmosdb sql container create \
+     --account-name daily-prayers-account \
+     --resource-group daily-prayers-rg \
+     --database-name daily-prayers \
+     --name lifePlans \
+     --partition-key-path "/userId"
+
+   az cosmosdb sql container create \
+     --account-name daily-prayers-account \
+     --resource-group daily-prayers-rg \
+     --database-name daily-prayers \
+     --name modelSettings \
+     --partition-key-path "/userId"
+   ```
+
+3. Recupere o endpoint e a chave primária para configurar as funções:
+
+   ```bash
+   az cosmosdb show --name daily-prayers-account --resource-group daily-prayers-rg --query "documentEndpoint" -o tsv
+   az cosmosdb keys list --name daily-prayers-account --resource-group daily-prayers-rg --type keys --query "primaryMasterKey" -o tsv
+   ```
+
+4. Preencha as variáveis `COSMOS_DB_ENDPOINT` e `COSMOS_DB_KEY` em `api/local.settings.json` (ou nos secrets do ambiente de produção). Os contêineres são opcionais, mas é recomendável mantê-los com os nomes padrão informados acima. Defina também um valor forte para `AUTH_JWT_SECRET`.
+
+### Autenticação e persistência de dados
+
+- A aplicação agora apresenta uma tela de login que libera a navegação somente após autenticação bem-sucedida. O fluxo de cadastro grava o usuário no contêiner `users` do Cosmos DB e provisiona automaticamente um plano de vida e configurações padrão.
+- Todas as funcionalidades dinâmicas passaram a ser persistidas no banco:
+  - **Anotações** são salvas no contêiner `notes` e ficam disponíveis em qualquer dispositivo autenticado.
+  - **Plano de vida** é sincronizado no contêiner `lifePlans`, garantindo que práticas e períodos concluídos sejam mantidos.
+  - **Preferências de modelos IA** são centralizadas no contêiner `modelSettings`, permitindo reuso entre sessões.
+- Tokens JWT são armazenados de forma criptografada no backend e enviados ao app, que os guarda em armazenamento seguro para revalidação automática da sessão.
 
 ### Recursos oficiais do Vaticano
 
