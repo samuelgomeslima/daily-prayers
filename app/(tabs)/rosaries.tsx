@@ -12,11 +12,7 @@ import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import {
-  ROSARY_MYSTERY_SETS,
-  getTodayMysterySet,
-  type MysterySet,
-} from '@/constants/rosary';
+import { ROSARY_MYSTERY_SETS, type MysterySet } from '@/constants/rosary';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -76,14 +72,14 @@ const rosarySequence: PrayerSequence = {
   ],
 };
 
-const createDailyRosarySequence = (set: MysterySet): PrayerSequence => ({
-  id: `daily-${set.id}-rosary`,
-  name: `Terço do Dia — ${set.title}`,
-  description: `Reze com os ${set.title} propostos para ${set.days}.`,
+const createMysterySetSequence = (set: MysterySet): PrayerSequence => ({
+  id: `rosary-${set.id}`,
+  name: `Santo Rosário — ${set.title}`,
+  description: `Reze com os ${set.title}, propostos para ${set.days}.`,
   sections: [
-    createOpeningSection(`daily-${set.id}`),
-    ...createMysterySections(set, 'daily'),
-    createClosingSection(`daily-${set.id}`),
+    createOpeningSection(`rosary-${set.id}`),
+    ...createMysterySections(set, `set-${set.id}`),
+    createClosingSection(`rosary-${set.id}`),
   ],
 });
 
@@ -345,13 +341,12 @@ export default function RosariesScreen() {
   const [activeModalSequence, setActiveModalSequence] = useState<PrayerSequence | null>(null);
   const [trackerStates, setTrackerStates] = useState<Record<string, PrayerBeadTrackerState>>({});
 
-  const todayMysterySet = getTodayMysterySet(ROSARY_MYSTERY_SETS);
-  const dailyRosarySequence = todayMysterySet
-    ? createDailyRosarySequence(todayMysterySet)
-    : null;
-
   const openSequenceModal = (sequence: PrayerSequence) => {
     setActiveModalSequence(sequence);
+  };
+
+  const handleMysterySetPress = (set: MysterySet) => {
+    openSequenceModal(createMysterySetSequence(set));
   };
 
   const closeModal = () => {
@@ -397,57 +392,10 @@ export default function RosariesScreen() {
           cada mistério ao avançar pelas dezenas.
         </ThemedText>
 
-        <RosaryMysteryTracker sets={ROSARY_MYSTERY_SETS} />
-
-        {todayMysterySet && dailyRosarySequence ? (
-          <ThemedView
-            style={[
-              styles.dailyActionCard,
-              {
-                borderColor: `${palette.border}99`,
-                shadowColor: `${palette.tint}1A`,
-              },
-            ]}
-            lightColor={Colors.light.surface}
-            darkColor={Colors.dark.surface}
-          >
-            <View style={styles.dailyActionHeader}>
-              <ThemedText
-                type="subtitle"
-                style={[styles.dailyActionTitle, { fontFamily: Fonts.serif }]}
-              >
-                Terço do dia — {todayMysterySet.title}
-              </ThemedText>
-              <ThemedText
-                style={styles.dailyActionSubtitle}
-                lightColor={`${Colors.light.tint}AA`}
-                darkColor={`${Colors.dark.tint}AA`}
-              >
-                {todayMysterySet.days}
-              </ThemedText>
-            </View>
-            <ThemedText style={styles.dailyActionDescription}>
-              Abra um contador dedicado aos mistérios indicados para a data de hoje.
-            </ThemedText>
-            <Pressable
-              onPress={() => openSequenceModal(dailyRosarySequence)}
-              style={({ pressed }) => [
-                styles.dailyActionButton,
-                { backgroundColor: `${palette.tint}1A`, borderColor: `${palette.tint}66` },
-                pressed && { opacity: 0.7 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Rezar o terço do dia com os ${todayMysterySet.title}`}
-            >
-              <ThemedText
-                type="defaultSemiBold"
-                style={[styles.dailyActionButtonLabel, { color: palette.tint }]}
-              >
-                Rezar terço do dia
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
-        ) : null}
+        <RosaryMysteryTracker
+          sets={ROSARY_MYSTERY_SETS}
+          onSelectSet={handleMysterySetPress}
+        />
       </ThemedView>
 
       <ThemedView style={styles.section}>
@@ -604,41 +552,6 @@ const styles = StyleSheet.create({
   },
   sectionDescription: {
     lineHeight: 22,
-  },
-  dailyActionCard: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 18,
-    gap: 12,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 28,
-    shadowOpacity: 0.12,
-  },
-  dailyActionHeader: {
-    gap: 4,
-  },
-  dailyActionTitle: {
-    fontSize: 18,
-  },
-  dailyActionSubtitle: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  dailyActionDescription: {
-    lineHeight: 20,
-  },
-  dailyActionButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-  },
-  dailyActionButtonLabel: {
-    fontSize: 14,
   },
   sequenceCard: {
     marginTop: 20,
