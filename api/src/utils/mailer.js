@@ -3,8 +3,9 @@ const EMAIL_SENDER = process.env.EMAIL_SENDER || 'Daily Prayers <no-reply@dailyp
 
 async function sendEmail({ to, subject, html, text }) {
   if (!RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY is not configured. Email was not sent.', { to, subject });
-    return false;
+    const error = new Error('RESEND_API_KEY is not configured. Email was not sent.');
+    console.warn(error.message, { to, subject });
+    throw error;
   }
 
   const response = await fetch('https://api.resend.com/emails', {
