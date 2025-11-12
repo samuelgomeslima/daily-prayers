@@ -16,6 +16,7 @@ jobs:
     name: Build and Deploy Job
     env:
       EXPO_PUBLIC_CHAT_BASE_URL: ${{ secrets.EXPO_PUBLIC_CHAT_BASE_URL }}
+      EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -46,3 +47,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WHITE_GROUND_0A882961E }}
           action: "close"
+
