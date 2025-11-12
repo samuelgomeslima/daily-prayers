@@ -7,7 +7,7 @@ type HolySpiritSymbolProps = ViewProps & {
   opacity?: number;
 };
 
-export function HolySpiritSymbol({ size = 160, opacity = 1, style, ...rest }: HolySpiritSymbolProps) {
+export function HolySpiritSymbol({ size = 160, opacity = 1, style, pointerEvents, ...rest }: HolySpiritSymbolProps) {
   const auraColor = useThemeColor(
     { light: 'rgba(5, 142, 217, 0.12)', dark: 'rgba(76, 184, 248, 0.16)' },
     'overlay'
@@ -30,6 +30,7 @@ export function HolySpiritSymbol({ size = 160, opacity = 1, style, ...rest }: Ho
         },
         style,
       ]}
+      pointerEvents={pointerEvents ?? 'none'}
       {...rest}>
       <View
         style={[
