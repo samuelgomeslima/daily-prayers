@@ -176,6 +176,7 @@ export default function SettingsScreen() {
     try {
       await logout();
       router.replace('/login');
+      router.dismissAll();
     } catch (error) {
       console.warn('Erro ao finalizar sessão', error);
       Alert.alert('Sair da conta', 'Não foi possível finalizar a sessão. Tente novamente.');

@@ -64,6 +64,7 @@ function AppRouter({ statusBarStyle, statusBarBackground }: AppRouterProps) {
   const { status } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const stackKey = status === 'authenticated' ? 'auth-stack' : 'guest-stack';
 
   if (status === 'checking') {
     return (
@@ -78,7 +79,7 @@ function AppRouter({ statusBarStyle, statusBarBackground }: AppRouterProps) {
   if (status !== 'authenticated') {
     return (
       <>
-        <Stack>
+        <Stack key={stackKey}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style={statusBarStyle} backgroundColor={statusBarBackground} />
@@ -88,7 +89,7 @@ function AppRouter({ statusBarStyle, statusBarBackground }: AppRouterProps) {
 
   return (
     <>
-      <Stack>
+      <Stack key={stackKey}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ title: 'IA Católica' }} />
         <Stack.Screen name="life-plan" options={{ title: 'Plano de Vida', headerShown: false }} />
