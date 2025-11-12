@@ -75,10 +75,83 @@ async function buildAndSendEmail({ email, name, token }) {
   });
 }
 
+function buildErrorResponse(error) {
+  const fallback = {
+    status: 500,
+    body: {
+      error: 'Não foi possível concluir o cadastro agora. Tente novamente em instantes.',
+    },
+  };
+
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  const message = error.message || 'Erro desconhecido.';
+
+  if (message.includes('NEON_DATABASE_URL is not configured')) {
+    return {
+      status: 500,
+      body: {
+        error:
+          'A variável de ambiente NEON_DATABASE_URL não está configurada. Defina-a com a string de conexão do banco Neon.',
+      },
+    };
+  }
+
+  if (message.includes('Invalid NEON_DATABASE_URL')) {
+    return {
+      status: 500,
+      body: {
+        error:
+          'O valor de NEON_DATABASE_URL é inválido. Utilize uma URL no formato postgresql://usuario:senha@host/banco.',
+      },
+    };
+  }
+
+  if (/Failed to parse response from Neon/i.test(message)) {
+    return {
+      status: 500,
+      body: {
+        error:
+          'O retorno do banco Neon não pôde ser interpretado. Verifique o projeto, permissões e o endpoint configurado.',
+      },
+    };
+  }
+
+  if (/fetch failed/i.test(message) || /Unexpected Neon error/i.test(message)) {
+    return {
+      status: 500,
+      body: {
+        error:
+          'Não foi possível conectar ao banco de dados Neon. Confirme a URL, as credenciais e a disponibilidade do serviço.',
+      },
+    };
+  }
+
+  return {
+    status: 500,
+    body: {
+      error: `Erro ao registrar usuário: ${message}`,
+    },
+  };
+}
+
 app.http('auth-register', {
-  methods: ['POST'],
+  methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   handler: async (request, context) => {
+    if (request.method === 'OPTIONS') {
+      return {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'POST,OPTIONS',
+        },
+      };
+    }
+
     await ensureSchema();
 
     const body = await readJsonBody(request);
@@ -137,6 +210,7 @@ app.http('auth-register', {
         return json(201, {
           message:
             'Usuário cadastrado, mas houve um problema ao enviar o e-mail de confirmação. Solicite um novo e-mail de confirmação mais tarde.',
+          details: error instanceof Error ? error.message : undefined,
         });
       }
 
@@ -145,9 +219,8 @@ app.http('auth-register', {
       });
     } catch (error) {
       context.error('Erro ao registrar usuário', error);
-      return json(500, {
-        error: 'Não foi possível concluir o cadastro. Tente novamente mais tarde.',
-      });
+      const { status, body } = buildErrorResponse(error);
+      return json(status, body);
     }
   },
 });
