@@ -16,6 +16,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   token: string | null;
   login: (credentials: { email: string; password: string }) => Promise<void>;
+  register: (data: { name: string; email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -36,6 +37,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const isHydratedRef = useRef(false);
+
+  const commitSession = useCallback(async (auth: AuthResponse) => {
+    const session: StoredAuthSession = {
+      token: auth.token,
+      user: auth.user,
+    };
+
+    setToken(auth.token);
+    setUser(auth.user);
+    setStatus('authenticated');
+    await persistSession(session);
+  }, []);
 
   const applySession = useCallback(async (session: StoredAuthSession | null) => {
     setToken(session?.token ?? null);
@@ -91,17 +104,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: { email, password },
       });
 
-      const session: StoredAuthSession = {
-        token: response.token,
-        user: response.user,
-      };
-
-      setToken(response.token);
-      setUser(response.user);
-      setStatus('authenticated');
-      await persistSession(session);
+      await commitSession(response);
     },
-    []
+    [commitSession]
+  );
+
+  const register = useCallback(
+    async ({ name, email, password }: { name: string; email: string; password: string }) => {
+      const response = await apiFetch<AuthResponse>('/auth/register', {
+        method: 'POST',
+        body: { name, email, password },
+      });
+
+      await commitSession(response);
+    },
+    [commitSession]
   );
 
   const logout = useCallback(async () => {
@@ -128,8 +145,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, token, login, logout, refreshProfile }),
-    [login, logout, refreshProfile, status, token, user]
+    () => ({ status, user, token, login, register, logout, refreshProfile }),
+    [login, logout, refreshProfile, register, status, token, user]
   );
 
   if (!isHydratedRef.current && status === 'checking') {

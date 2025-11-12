@@ -1,6 +1,8 @@
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -14,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useModelSettings } from '@/contexts/model-settings-context';
+import { useAuth } from '@/hooks/use-auth';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { resolveChatEndpoint } from '@/utils/chat-endpoint';
@@ -70,11 +73,14 @@ function ModelOptionButton({
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
   const mutedText = useThemeColor({ light: '#6D73A8', dark: '#A3AAD9' }, 'icon');
 
+  const { logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [availability, setAvailability] = useState<AiAvailabilityState>({ status: 'checking' });
   const isMountedRef = useRef(true);
 
@@ -163,6 +169,37 @@ export default function SettingsScreen() {
   useEffect(() => {
     void checkAvailability();
   }, [checkAvailability]);
+
+  const performLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      router.replace('/login');
+    } catch (error) {
+      console.warn('Erro ao finalizar sessão', error);
+      Alert.alert('Sair da conta', 'Não foi possível finalizar a sessão. Tente novamente.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, [logout, router]);
+
+  const handleLogout = useCallback(() => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    Alert.alert('Sair da conta', 'Deseja realmente encerrar sua sessão neste dispositivo?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: () => {
+          void performLogout();
+        },
+      },
+    ]);
+  }, [isLoggingOut, performLogout]);
 
   const {
     catechistModel,
@@ -350,6 +387,42 @@ export default function SettingsScreen() {
               />
             ))}
           </View>
+
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Sessão
+            </ThemedText>
+            <ThemedText style={[styles.sectionDescription, { color: mutedText }]}>
+              Finalize o acesso caso esteja usando um dispositivo compartilhado.
+            </ThemedText>
+            <Pressable
+              onPress={handleLogout}
+              disabled={isLoggingOut}
+              style={({ pressed }) => [
+                styles.logoutButton,
+                {
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.18)' : 'rgba(248, 113, 113, 0.14)',
+                  borderColor: isDark ? 'rgba(239, 68, 68, 0.32)' : 'rgba(248, 113, 113, 0.32)',
+                  opacity: pressed || isLoggingOut ? 0.75 : 1,
+                },
+              ]}
+            >
+              {isLoggingOut ? (
+                <ActivityIndicator color={isDark ? '#FEE2E2' : '#7F1D1D'} />
+              ) : (
+                <View style={styles.logoutContent}>
+                  <IconSymbol name="rectangle.portrait.and.arrow.right.fill" size={22} color={isDark ? '#FEE2E2' : '#B91C1C'} />
+                  <ThemedText
+                    style={styles.logoutLabel}
+                    lightColor="#B91C1C"
+                    darkColor="#FEE2E2"
+                  >
+                    Sair da conta
+                  </ThemedText>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -459,6 +532,23 @@ const styles = StyleSheet.create({
   sectionDescription: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  logoutButton: {
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  logoutLabel: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   optionButton: {
     borderWidth: 1,
