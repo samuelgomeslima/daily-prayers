@@ -138,9 +138,20 @@ function buildErrorResponse(error) {
 }
 
 app.http('auth-register', {
-  methods: ['POST'],
+  methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   handler: async (request, context) => {
+    if (request.method === 'OPTIONS') {
+      return {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'POST,OPTIONS',
+        },
+      };
+    }
+
     await ensureSchema();
 
     const body = await readJsonBody(request);
