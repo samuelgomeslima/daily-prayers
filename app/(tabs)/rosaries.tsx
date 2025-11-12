@@ -17,30 +17,35 @@ import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const createOpeningSection = (prefix: string) => ({
-  title: 'Abertura',
+  title: 'Abertura — Método de São Luís Maria Grignion de Montfort',
   description:
-    'Inicie com o Sinal da Cruz, reze o Credo, um Pai-Nosso, três Ave-Marias e o Glória ao Pai.',
+    'Inicie com o Sinal da Cruz, invoque o Espírito Santo, ofereça o Rosário e reze o Credo, um Pai-Nosso e as três Ave-Marias pelas virtudes da fé, esperança e caridade.',
   beads: [
     { id: `${prefix}-opening-cross`, label: 'Sinal da Cruz', type: 'marker' },
+    { id: `${prefix}-opening-come-holy-spirit`, label: 'Vinde, Espírito Santo', type: 'marker' },
+    { id: `${prefix}-opening-offering`, label: 'Oferecimento do Rosário', type: 'marker' },
     { id: `${prefix}-opening-creed`, label: 'Credo dos Apóstolos', type: 'large' },
     { id: `${prefix}-opening-our-father`, label: 'Pai-Nosso', type: 'large' },
-    { id: `${prefix}-opening-hail-1`, label: 'Ave-Maria 1', type: 'small' },
-    { id: `${prefix}-opening-hail-2`, label: 'Ave-Maria 2', type: 'small' },
-    { id: `${prefix}-opening-hail-3`, label: 'Ave-Maria 3', type: 'small' },
+    { id: `${prefix}-opening-hail-faith`, label: 'Ave-Maria (Fé)', type: 'small' },
+    { id: `${prefix}-opening-hail-hope`, label: 'Ave-Maria (Esperança)', type: 'small' },
+    { id: `${prefix}-opening-hail-charity`, label: 'Ave-Maria (Caridade)', type: 'small' },
     { id: `${prefix}-opening-glory`, label: 'Glória ao Pai', type: 'marker' },
   ],
 });
 
 const createClosingSection = (prefix: string) => ({
-  title: 'Conclusão',
-  description: 'Reze a Salve Rainha e as jaculatórias finais.',
+  title: 'Conclusão — Consagração final de Montfort',
+  description:
+    'Finalize com a Salve Rainha, a oração de oferecimento recomendada por São Luís Maria e, se possível, a ladainha ou consagração final proposta por ele.',
   beads: [
     { id: `${prefix}-closing-hail-holy-queen`, label: 'Salve Rainha', type: 'marker' },
-    { id: `${prefix}-closing-final-prayers`, label: 'Orações finais', type: 'marker' },
+    { id: `${prefix}-closing-final-offering`, label: 'Oração de oferecimento final', type: 'marker' },
+    { id: `${prefix}-closing-final-prayers`, label: 'Orações complementares', type: 'marker' },
   ],
 });
 
 const createDecadeBeads = (baseId: string) => [
+  { id: `${baseId}-meditation`, label: 'Meditação Montfort', type: 'marker' },
   { id: `${baseId}-our-father`, label: 'Pai-Nosso', type: 'large' },
   ...Array.from({ length: 10 }, (_, beadIndex) => ({
     id: `${baseId}-hail-${beadIndex + 1}`,
@@ -53,9 +58,15 @@ const createDecadeBeads = (baseId: string) => [
 const createMysterySections = (set: MysterySet, prefix: string) =>
   set.mysteries.map((mystery, index) => {
     const orderNumber = index + 1;
+    const description = [
+      mystery.title,
+      `Meditação Montfort: ${mystery.meditation}`,
+      `Oferecimento: ${mystery.offering}`,
+      `Fruto espiritual: ${mystery.fruit}`,
+    ].join('\n\n');
     return {
       title: `${set.title} — Mistério ${orderNumber}`,
-      description: mystery,
+      description,
       beads: createDecadeBeads(`${prefix}-${set.id}-mystery-${orderNumber}`),
     };
   });
@@ -64,7 +75,7 @@ const rosarySequence: PrayerSequence = {
   id: 'dominican-rosary',
   name: 'Santo Rosário',
   description:
-    'Acompanhe cada conta do rosário dominicano, percorrendo os quatro mistérios em sequência.',
+    'Reze o rosário dominicano segundo o método de São Luís Maria Grignion de Montfort, com as meditações e oferecimentos próprios de cada mistério.',
   sections: [
     createOpeningSection('rosary'),
     ...ROSARY_MYSTERY_SETS.flatMap((set) => createMysterySections(set, 'rosary')),
@@ -75,7 +86,7 @@ const rosarySequence: PrayerSequence = {
 const createMysterySetSequence = (set: MysterySet): PrayerSequence => ({
   id: `rosary-${set.id}`,
   name: `Santo Rosário — ${set.title}`,
-  description: `Reze com os ${set.title}, propostos para ${set.days}.`,
+  description: `Reze com os ${set.title}, propostos para ${set.days}, seguindo o método de São Luís Maria Grignion de Montfort.`,
   sections: [
     createOpeningSection(`rosary-${set.id}`),
     ...createMysterySections(set, `set-${set.id}`),
