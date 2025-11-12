@@ -388,8 +388,8 @@ export default function RosariesScreen() {
           Mistérios do Santo Terço por dia
         </ThemedText>
         <ThemedText style={styles.sectionDescription}>
-          O conjunto correspondente ao dia em São Paulo fica automaticamente em destaque. Marque
-          cada mistério ao avançar pelas dezenas.
+          O conjunto correspondente ao dia em São Paulo fica automaticamente em destaque. Toque no
+          mistério desejado para abrir o terço correspondente em modal.
         </ThemedText>
 
         <RosaryMysteryTracker
