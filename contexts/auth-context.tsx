@@ -36,6 +36,7 @@ export type AuthState = {
   status: AuthStatus;
   token: string | null;
   user: AuthUser | null;
+  expiresAt: string | null;
 };
 
 type AuthResult = { success: boolean; message?: string };
@@ -44,6 +45,7 @@ type AuthContextValue = {
   status: AuthStatus;
   user: AuthUser | null;
   token: string | null;
+  expiresAt: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   register: (payload: { email: string; password: string; name?: string | null }) => Promise<AuthResult>;
@@ -57,20 +59,18 @@ const DEFAULT_STATE: AuthState = {
   status: 'loading',
   token: null,
   user: null,
+  expiresAt: null,
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-type PersistableState = {
-  status: AuthStatus;
-  token: string | null;
-  user: AuthUser | null;
-};
+type PersistableState = Pick<AuthState, 'status' | 'token' | 'user' | 'expiresAt'>;
 
 type StoredPayload = {
   status: AuthStatus;
   token?: string | null;
   user?: AuthUser | null;
+  expiresAt?: string | null;
 };
 
 function getStorageUri() {
@@ -101,10 +101,15 @@ function sanitizeStoredPayload(payload: unknown): PersistableState | null {
       return null;
     }
 
+    if (typeof candidate.expiresAt !== 'string') {
+      return null;
+    }
+
     return {
       status: 'authenticated',
       token: candidate.token,
       user: candidate.user,
+      expiresAt: candidate.expiresAt,
     };
   }
 
@@ -113,6 +118,7 @@ function sanitizeStoredPayload(payload: unknown): PersistableState | null {
       status: 'guest',
       token: null,
       user: null,
+      expiresAt: null,
     };
   }
 
@@ -120,6 +126,7 @@ function sanitizeStoredPayload(payload: unknown): PersistableState | null {
     status: 'unauthenticated',
     token: null,
     user: null,
+    expiresAt: null,
   };
 }
 
@@ -214,21 +221,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    (async () => {
+    const hydrate = async () => {
       const stored = await readStoredState();
 
       if (!isMounted) {
         return;
       }
 
-      if (stored) {
-        setState({ ...stored });
-      } else {
-        setState({ status: 'unauthenticated', token: null, user: null });
+      if (!stored) {
+        const nextState: AuthState = { status: 'unauthenticated', token: null, user: null, expiresAt: null };
+        setState(nextState);
+        await persistState(nextState);
+        return;
       }
 
-      isHydratedRef.current = true;
-    })();
+      if (stored.status !== 'authenticated') {
+        setState(stored);
+
+        if (stored.status === 'unauthenticated') {
+          await persistState(stored);
+        }
+
+        return;
+      }
+
+      const expiresAtDate = new Date(stored.expiresAt ?? '');
+
+      if (!stored.expiresAt || Number.isNaN(expiresAtDate.getTime()) || expiresAtDate.getTime() <= Date.now()) {
+        const nextState: AuthState = { status: 'unauthenticated', token: null, user: null, expiresAt: null };
+        setState(nextState);
+        await persistState(nextState);
+        return;
+      }
+
+      try {
+        const response = await apiRequest<{ user: AuthUser }>('/auth-profile', { method: 'GET' }, stored.token);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const nextState: AuthState = {
+          status: 'authenticated',
+          token: stored.token,
+          user: response.user,
+          expiresAt: stored.expiresAt,
+        };
+
+        setState(nextState);
+        await persistState(nextState);
+      } catch (error) {
+        console.warn('Não foi possível validar a sessão salva.', error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const fallbackState: AuthState = { status: 'unauthenticated', token: null, user: null, expiresAt: null };
+        setState(fallbackState);
+        await persistState(fallbackState);
+      }
+    };
+
+    hydrate().finally(() => {
+      if (isMounted) {
+        isHydratedRef.current = true;
+      }
+    });
 
     return () => {
       isMounted = false;
@@ -259,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           status: 'authenticated',
           token: response.token,
           user: response.user,
+          expiresAt: response.expiresAt,
         };
 
         setState(nextState);
@@ -314,13 +374,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const nextState: AuthState = { status: 'unauthenticated', token: null, user: null };
+    const nextState: AuthState = { status: 'unauthenticated', token: null, user: null, expiresAt: null };
     setState(nextState);
     await persist(nextState);
-  }, [persist, state.status, state.token]);
+  }, [persist, state.status, state.token, state.expiresAt]);
 
   const continueAsGuest = useCallback(async () => {
-    const nextState: AuthState = { status: 'guest', token: null, user: null };
+    const nextState: AuthState = { status: 'guest', token: null, user: null, expiresAt: null };
     setState(nextState);
     await persist(nextState);
   }, [persist]);
@@ -339,22 +399,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         status: 'authenticated',
         token: state.token,
         user: response.user,
+        expiresAt: state.expiresAt,
       };
 
       setState(nextState);
       await persist(nextState);
     } catch (error) {
       console.warn('Não foi possível atualizar o perfil do usuário.', error);
-      const fallbackState: AuthState = { status: 'unauthenticated', token: null, user: null };
+      const fallbackState: AuthState = { status: 'unauthenticated', token: null, user: null, expiresAt: null };
       setState(fallbackState);
       await persist(fallbackState);
     }
-  }, [persist, state.status, state.token]);
+  }, [persist, state.status, state.token, state.expiresAt]);
 
   const contextValue = useMemo<AuthContextValue>(() => ({
     status: state.status,
     user: state.user,
     token: state.token,
+    expiresAt: state.expiresAt,
     isLoading: state.status === 'loading',
     login,
     register,
