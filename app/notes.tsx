@@ -17,6 +17,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { RestrictedFeature } from '@/components/restricted-feature';
 
 type Note = {
   id: string;
@@ -352,50 +353,51 @@ export default function NotesScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.flex}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
-      <ThemedView style={styles.container}>
-        <HolySpiritSymbol size={200} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
-        <HolySpiritSymbol size={160} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
-        <FlatList
-          data={filteredNotes}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          ListHeaderComponent={
-            <View style={styles.header}>
-              <ThemedText type="title" style={styles.screenTitle}>
-                Anotações
-              </ThemedText>
-              <ThemedText style={[styles.lead, { color: mutedText }]}>
-                Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.
-              </ThemedText>
-              <TextInput
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                placeholder="Pesquisar anotações"
-                placeholderTextColor={placeholderColor}
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
-                ]}
-                autoCapitalize="sentences"
-                autoCorrect
-                accessibilityLabel="Pesquisar anotações"
-                returnKeyType="search"
-              />
-              <ThemedView
-                style={styles.formCard}
-                lightColor={Colors.light.surface}
-                darkColor={Colors.dark.surface}>
-                <ThemedText type="subtitle" style={styles.formTitle}>
-                  {editingNoteId ? 'Editar anotação' : 'Nova anotação'}
+    <RestrictedFeature featureName="Anotações">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
+        <ThemedView style={styles.container}>
+          <HolySpiritSymbol size={200} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
+          <HolySpiritSymbol size={160} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
+          <FlatList
+            data={filteredNotes}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            ListHeaderComponent={
+              <View style={styles.header}>
+                <ThemedText type="title" style={styles.screenTitle}>
+                  Anotações
+                </ThemedText>
+                <ThemedText style={[styles.lead, { color: mutedText }]}>
+                  Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.
                 </ThemedText>
                 <TextInput
-                  value={title}
-                  onChangeText={setTitle}
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  placeholder="Pesquisar anotações"
+                  placeholderTextColor={placeholderColor}
+                  style={[
+                    styles.input,
+                    { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
+                  ]}
+                  autoCapitalize="sentences"
+                  autoCorrect
+                  accessibilityLabel="Pesquisar anotações"
+                  returnKeyType="search"
+                />
+                <ThemedView
+                  style={styles.formCard}
+                  lightColor={Colors.light.surface}
+                  darkColor={Colors.dark.surface}>
+                  <ThemedText type="subtitle" style={styles.formTitle}>
+                    {editingNoteId ? 'Editar anotação' : 'Nova anotação'}
+                  </ThemedText>
+                  <TextInput
+                    value={title}
+                    onChangeText={setTitle}
                   placeholder="Título da anotação"
                   placeholderTextColor={placeholderColor}
                   style={[
@@ -466,10 +468,11 @@ export default function NotesScreen() {
               </ThemedText>
             </ThemedView>
           }
-          keyboardShouldPersistTaps="handled"
-        />
-      </ThemedView>
-    </KeyboardAvoidingView>
+            keyboardShouldPersistTaps="handled"
+          />
+        </ThemedView>
+      </KeyboardAvoidingView>
+    </RestrictedFeature>
   );
 }
 

@@ -17,6 +17,7 @@ import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { resolveChatEndpoint } from '@/utils/chat-endpoint';
+import { RestrictedFeature } from '@/components/restricted-feature';
 
 const MODEL_LABELS = {
   'gpt-5-mini': 'GPT-5 Mini',
@@ -223,8 +224,9 @@ export default function SettingsScreen() {
   const isCheckingAvailability = availability.status === 'checking';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ThemedView style={styles.container}>
+    <RestrictedFeature featureName="Configurações">
+      <SafeAreaView style={styles.safeArea}>
+        <ThemedView style={styles.container}>
         <HolySpiritSymbol size={240} opacity={0.1} style={styles.symbolTop} pointerEvents="none" />
         <HolySpiritSymbol size={200} opacity={0.08} style={styles.symbolBottom} pointerEvents="none" />
         <ScrollView
@@ -351,8 +353,9 @@ export default function SettingsScreen() {
             ))}
           </View>
         </ScrollView>
-      </ThemedView>
-    </SafeAreaView>
+        </ThemedView>
+      </SafeAreaView>
+    </RestrictedFeature>
   );
 }
 

@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { RestrictedFeature } from '@/components/restricted-feature';
 
 type MoreOption = {
   title: string;
@@ -48,58 +49,60 @@ export default function MoreScreen() {
   const palette = Colors[colorScheme];
 
   return (
-    <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
-      <HolySpiritSymbol size={220} opacity={0.12} style={styles.symbolTop} />
-      <HolySpiritSymbol size={180} opacity={0.1} style={styles.symbolBottom} />
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        bounces
-      >
-        <View style={styles.sectionHeader}>
-          <ThemedText style={styles.sectionTitle}>Ferramentas em destaque</ThemedText>
-          <ThemedText style={styles.sectionSubtitle}>
-            Escolha uma área e aprofunde sua vivência espiritual com curadoria pastoral.
-          </ThemedText>
-        </View>
-        <View style={styles.optionsContainer}>
-          {OPTIONS.map((option) => (
-            <Link key={option.href} href={option.href} asChild>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.optionRow,
-                  {
-                    borderColor: `${palette.border}55`,
-                    backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
-                    shadowColor: `${palette.tint}26`,
-                    transform: [{ translateY: pressed ? 2 : 0 }],
-                  },
-                ]}
-                android_ripple={{ color: `${palette.tint}1A` }}
-              >
-                <View
-                  style={[
-                    styles.iconContainer,
+    <RestrictedFeature featureName="Mais">
+      <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
+        <HolySpiritSymbol size={220} opacity={0.12} style={styles.symbolTop} />
+        <HolySpiritSymbol size={180} opacity={0.1} style={styles.symbolBottom} />
+        <ScrollView
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          bounces
+        >
+          <View style={styles.sectionHeader}>
+            <ThemedText style={styles.sectionTitle}>Ferramentas em destaque</ThemedText>
+            <ThemedText style={styles.sectionSubtitle}>
+              Escolha uma área e aprofunde sua vivência espiritual com curadoria pastoral.
+            </ThemedText>
+          </View>
+          <View style={styles.optionsContainer}>
+            {OPTIONS.map((option) => (
+              <Link key={option.href} href={option.href} asChild>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.optionRow,
                     {
-                      backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}18`,
-                      borderColor: `${palette.tint}35`,
+                      borderColor: `${palette.border}55`,
+                      backgroundColor: colorScheme === 'dark' ? Colors.dark.surface : Colors.light.surface,
+                      shadowColor: `${palette.tint}26`,
+                      transform: [{ translateY: pressed ? 2 : 0 }],
                     },
                   ]}
+                  android_ripple={{ color: `${palette.tint}1A` }}
                 >
-                  <IconSymbol name={option.icon} size={24} color={palette.tint} />
-                </View>
-                <View style={styles.optionContent}>
-                  <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
-                  <ThemedText style={styles.optionDescription} numberOfLines={2}>
-                    {option.description}
-                  </ThemedText>
-                </View>
-              </Pressable>
-            </Link>
-          ))}
-        </View>
-      </ScrollView>
-    </ThemedView>
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      {
+                        backgroundColor: colorScheme === 'dark' ? `${palette.tint}22` : `${palette.tint}18`,
+                        borderColor: `${palette.tint}35`,
+                      },
+                    ]}
+                  >
+                    <IconSymbol name={option.icon} size={24} color={palette.tint} />
+                  </View>
+                  <View style={styles.optionContent}>
+                    <ThemedText style={styles.optionTitle}>{option.title}</ThemedText>
+                    <ThemedText style={styles.optionDescription} numberOfLines={2}>
+                      {option.description}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              </Link>
+            ))}
+          </View>
+        </ScrollView>
+      </ThemedView>
+    </RestrictedFeature>
   );
 }
 

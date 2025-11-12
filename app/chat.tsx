@@ -13,6 +13,7 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
+import { RestrictedFeature } from '@/components/restricted-feature';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -211,66 +212,68 @@ export default function ChatScreen() {
   const screenBackground = palette.background;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: screenBackground }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: screenBackground }}
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
-        <ThemedView style={[styles.container, { backgroundColor: screenBackground }]}>
-          <HolySpiritSymbol size={220} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
-          <HolySpiritSymbol size={180} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-            keyboardShouldPersistTaps="handled"
-          />
-          <View
-            style={[
-              styles.inputContainer,
-              {
-                borderTopColor: `${palette.border}80`,
-                backgroundColor: palette.background,
-              },
-            ]}>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder="Escreva sua pergunta ou pedido de oração..."
-              placeholderTextColor={colorScheme === 'dark' ? '#8C96D1' : '#7D84B8'}
-              style={[
-                styles.textInput,
-                {
-                  borderColor: `${palette.border}A6`,
-                  backgroundColor: palette.surface,
-                  color: palette.text,
-                },
-              ]}
-              multiline
+    <RestrictedFeature featureName="IA Católica">
+      <SafeAreaView style={{ flex: 1, backgroundColor: screenBackground }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1, backgroundColor: screenBackground }}
+          behavior={Platform.select({ ios: 'padding', android: undefined })}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+          <ThemedView style={[styles.container, { backgroundColor: screenBackground }]}>
+            <HolySpiritSymbol size={220} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
+            <HolySpiritSymbol size={180} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderMessage}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+              keyboardShouldPersistTaps="handled"
             />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Enviar mensagem"
-              accessibilityHint="Toque duas vezes para enviar sua mensagem."
-              onPress={sendMessage}
-              disabled={isSending}
-              style={({ pressed }) => [
-                styles.sendButton,
+            <View
+              style={[
+                styles.inputContainer,
                 {
-                  backgroundColor: isSending ? `${palette.tint}66` : palette.tint,
-                  opacity: pressed ? 0.9 : 1,
+                  borderTopColor: `${palette.border}80`,
+                  backgroundColor: palette.background,
                 },
               ]}>
-              <MaterialIcons name="arrow-forward" size={24} color="#fff" />
-            </Pressable>
-          </View>
-        </ThemedView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder="Escreva sua pergunta ou pedido de oração..."
+                placeholderTextColor={colorScheme === 'dark' ? '#8C96D1' : '#7D84B8'}
+                style={[
+                  styles.textInput,
+                  {
+                    borderColor: `${palette.border}A6`,
+                    backgroundColor: palette.surface,
+                    color: palette.text,
+                  },
+                ]}
+                multiline
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensagem"
+                accessibilityHint="Toque duas vezes para enviar sua mensagem."
+                onPress={sendMessage}
+                disabled={isSending}
+                style={({ pressed }) => [
+                  styles.sendButton,
+                  {
+                    backgroundColor: isSending ? `${palette.tint}66` : palette.tint,
+                    opacity: pressed ? 0.9 : 1,
+                  },
+                ]}>
+                <MaterialIcons name="arrow-forward" size={24} color="#fff" />
+              </Pressable>
+            </View>
+          </ThemedView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </RestrictedFeature>
   );
 }
 

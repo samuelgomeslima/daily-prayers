@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { RestrictedFeature } from '@/components/restricted-feature';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const LIFE_PLAN_STORAGE_FILE = FileSystem.documentDirectory
@@ -406,16 +407,12 @@ export default function LifePlanScreen() {
   const placeholderColor = colorScheme === 'dark' ? 'rgba(244, 251, 255, 0.48)' : 'rgba(4, 48, 73, 0.45)';
   const overlayColor = colorScheme === 'dark' ? Colors.dark.overlay : Colors.light.overlay;
 
-  if (loading) {
-    return (
-      <ThemedView style={styles.loadingContainer} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
-        <ActivityIndicator size="large" color={palette.tint} />
-        <ThemedText style={styles.loadingText}>Carregando plano de vida...</ThemedText>
-      </ThemedView>
-    );
-  }
-
-  return (
+  const content = loading ? (
+    <ThemedView style={styles.loadingContainer} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
+      <ActivityIndicator size="large" color={palette.tint} />
+      <ThemedText style={styles.loadingText}>Carregando plano de vida...</ThemedText>
+    </ThemedView>
+  ) : (
     <ThemedView style={styles.container} lightColor={Colors.light.background} darkColor={Colors.dark.background}>
       <ScrollView
         contentContainerStyle={styles.content}
@@ -674,6 +671,8 @@ export default function LifePlanScreen() {
       </ScrollView>
     </ThemedView>
   );
+
+  return <RestrictedFeature featureName="Plano de Vida">{content}</RestrictedFeature>;
 }
 
 const styles = StyleSheet.create({

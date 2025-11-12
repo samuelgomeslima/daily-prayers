@@ -10,6 +10,12 @@
     "OPENAI_CATECHIST_MAX_TOKENS": "8192",
     "FILE_SEARCH_TOOL": "",
     "OPENAI_TRANSCRIBE_MODEL": "gpt-4o-mini-transcribe",
-    "OPENAI_PROXY_TOKEN": ""
+    "OPENAI_PROXY_TOKEN": "",
+    "NEON_DATABASE_URL": "postgresql://usuario:senha@servidor.neon.tech/neondb",
+    "APP_BASE_URL": "http://localhost:8081",
+    "API_BASE_URL": "http://localhost:7071",
+    "RESEND_API_KEY": "",
+    "EMAIL_SENDER": "Daily Prayers <no-reply@dailyprayers.app>",
+    "SESSION_TOKEN_TTL_DAYS": "30"
   }
 }

@@ -16,6 +16,8 @@ import {
   writeAsStringAsync,
 } from 'expo-file-system';
 
+import { useAuth } from '@/hooks/use-auth';
+import { apiRequest } from '@/utils/api-client';
 const STORAGE_KEY = '@daily-prayers/model-settings';
 const STORAGE_FILE = 'model-settings.json';
 
@@ -150,6 +152,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ModelSettingsState>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const hasHydratedRef = useRef(false);
+  const { status: authStatus, token } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
@@ -172,6 +175,39 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !token) {
+      return;
+    }
+
+    let isCurrent = true;
+
+    (async () => {
+      try {
+        const response = await apiRequest<{ chatModel: ModelOption; catechistModel: ModelOption }>(
+          '/model-preferences',
+          { method: 'GET' },
+          token
+        );
+
+        if (!isCurrent) {
+          return;
+        }
+
+        setSettings((prev) => ({
+          catechistModel: sanitizeModel(response.catechistModel) ?? prev.catechistModel,
+          chatModel: sanitizeModel(response.chatModel) ?? prev.chatModel,
+        }));
+      } catch (error) {
+        console.warn('Não foi possível carregar as preferências de modelos do servidor.', error);
+      }
+    })();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [authStatus, token]);
+
   const updateSettings = useCallback(
     (updater: (previous: ModelSettingsState) => ModelSettingsState) => {
       setSettings((prev) => {
@@ -179,12 +215,28 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
 
         if (hasHydratedRef.current) {
           void persistSettings(next);
+
+          if (authStatus === 'authenticated' && token) {
+            void apiRequest(
+              '/model-preferences',
+              {
+                method: 'PUT',
+                body: JSON.stringify({
+                  chatModel: next.chatModel,
+                  catechistModel: next.catechistModel,
+                }),
+              },
+              token
+            ).catch((error) => {
+              console.warn('Não foi possível salvar as preferências de modelos no servidor.', error);
+            });
+          }
         }
 
         return next;
       });
     },
-    []
+    [authStatus, token]
   );
 
   const setCatechistModel = useCallback(

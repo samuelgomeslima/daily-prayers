@@ -45,8 +45,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `OPENAI_CATECHIST_MODEL` (optional) – defaults to `gpt-4o-mini`.
    - `OPENAI_CATECHIST_MAX_TOKENS` (optional) – defaults to `8192`.
    - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
-   - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
-   - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+  - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
+  - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+  - `NEON_DATABASE_URL` (**required**) – string de conexão do banco Neon (ex.: `postgresql://usuario:senha@servidor.neon.tech/neondb`).
+  - `APP_BASE_URL` (**recomendado**) – URL pública do app para compor o link de confirmação de e-mail enviado aos usuários.
+  - `API_BASE_URL` (opcional) – URL pública da API; usada como fallback para gerar o link de confirmação.
+  - `RESEND_API_KEY` (opcional) – chave da API do [Resend](https://resend.com/) usada para envio de e-mails transacionais.
+  - `EMAIL_SENDER` (opcional) – endereço exibido como remetente nos e-mails de confirmação.
+  - `SESSION_TOKEN_TTL_DAYS` (opcional) – tempo de expiração dos tokens de sessão em dias (padrão: `30`).
 
    > [!TIP]
    > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
@@ -74,6 +80,14 @@ You can start developing by editing the files inside the **app** directory. This
 2. No Azure Static Web Apps (ou no ambiente onde as funções estão rodando), defina as variáveis **OPENAI_API_KEY** e **OPENAI_CATECHIST_AGENT_ID** com os valores correspondentes.
 3. Se quiser testar em dispositivos físicos, exponha o endpoint configurando **EXPO_PUBLIC_CATECHIST_BASE_URL** (ou reutilize **EXPO_PUBLIC_CHAT_BASE_URL**) apontando para a URL pública da Static Web App.
 4. Publique as alterações. Depois que as funções forem atualizadas, abra a aba do assistente e envie uma mensagem para validar se o agente está respondendo conforme o esperado.
+
+### Autenticação e banco de dados Neon
+
+- A API agora mantém as tabelas de usuários, orações, terços, plano de vida, progresso do plano, notas, preferências de IA e progresso dos terços diretamente no Postgres do Neon. As estruturas são criadas automaticamente na primeira execução se `NEON_DATABASE_URL` estiver configurada.
+- O cadastro de novos usuários exige confirmação de e-mail. Configure `RESEND_API_KEY` e `EMAIL_SENDER` para enviar o link de ativação pelo serviço Resend. Caso a API de e-mail não esteja disponível, o sistema registra o usuário e exibe uma mensagem para reenviar o link posteriormente.
+- As preferências de modelo de IA são sincronizadas com a tabela `ai_model_preferences` sempre que o usuário autenticado altera a opção em **Configurações**. Usuários convidados continuam utilizando o armazenamento local.
+- Sessões autenticadas utilizam tokens persistidos na tabela `user_sessions`. Ajuste `SESSION_TOKEN_TTL_DAYS` se desejar alterar o tempo padrão de validade (30 dias).
+- Usuários sem login podem optar pelo modo convidado e terão acesso apenas às abas **Home**, **Orações** e **Terços**. As demais telas exibem um aviso solicitando autenticação.
 
 ### Recursos oficiais do Vaticano
 
