@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useModelSettings } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -74,6 +76,21 @@ export default function SettingsScreen() {
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
   const mutedText = useThemeColor({ light: '#6D73A8', dark: '#A3AAD9' }, 'icon');
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    router.replace('/login');
+  }, [logout, router]);
+
+  const sessionDescription = useMemo(() => {
+    if (!user) {
+      return 'Não foi possível carregar os dados do usuário.';
+    }
+
+    return `Você está conectado como ${user.name || user.email}.`;
+  }, [user]);
 
   const [availability, setAvailability] = useState<AiAvailabilityState>({ status: 'checking' });
   const isMountedRef = useRef(true);
@@ -350,6 +367,29 @@ export default function SettingsScreen() {
               />
             ))}
           </View>
+
+          <View style={[styles.sessionCard, { borderColor: palette.border, backgroundColor: palette.surface }]}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Sessão
+            </ThemedText>
+            <ThemedText style={[styles.sessionDescription, { color: mutedText }]}>
+              {sessionDescription}
+            </ThemedText>
+            <Pressable
+              onPress={() => {
+                void handleLogout();
+              }}
+              style={({ pressed }) => [
+                styles.logoutButton,
+                {
+                  backgroundColor: isDark ? '#DC2626' : '#EF4444',
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <ThemedText style={styles.logoutLabel}>Encerrar sessão</ThemedText>
+            </Pressable>
+          </View>
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -460,6 +500,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
+  sessionCard: {
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  sessionDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
   optionButton: {
     borderWidth: 1,
     borderRadius: 12,
@@ -477,6 +527,17 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     flex: 1,
+  },
+  logoutButton: {
+    borderRadius: 999,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  logoutLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   symbolTop: {
     position: 'absolute',

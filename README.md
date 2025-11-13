@@ -57,6 +57,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+### Configuração do banco de dados Neon
+
+1. Crie um projeto no [Neon](https://console.neon.tech/), copie a `DATABASE_URL` completa (incluindo parâmetros SSL) e defina-a nas variáveis de ambiente da API (`api/local.settings.json` em desenvolvimento ou no painel da Function App em produção).
+2. Ajuste opcionalmente o tempo de expiração das sessões editando `SESSION_TOKEN_TTL_DAYS` no mesmo arquivo de configurações (padrão: 7 dias).
+3. Execute o script [`api/sql/create_users_table.sql`](api/sql/create_users_table.sql) no console SQL do Neon para criar a tabela `users` com os índices necessários.
+4. Atualize `EXPO_PUBLIC_API_BASE_URL` no arquivo `.env` do aplicativo para apontar para a URL pública das funções (ex.: `https://<sua-funcao>.azurewebsites.net/api`).
+5. Após configurar as variáveis, instale as dependências da API (`npm install` dentro da pasta `api`) e inicie as funções com `npm start`.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
