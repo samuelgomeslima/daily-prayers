@@ -100,7 +100,8 @@ async function fetchJson(input: string, init: RequestInit): Promise<any> {
 
   if (!response.ok) {
     const message = data?.error?.message ?? 'Não foi possível completar a operação.';
-    const error = new Error(message);
+    const error = new Error(message) as Error & { status?: number };
+    error.status = response.status;
     throw error;
   }
 
@@ -195,8 +196,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         await applySession(data.token, data.user as AuthenticatedUser);
       } catch (error) {
-        console.warn('Sessão inválida, limpando credenciais.', error);
-        await clearSession();
+        const status = (error as { status?: number } | null)?.status;
+
+        if (status === 401 || status === 403) {
+          console.warn('Sessão inválida, limpando credenciais.', error);
+          await clearSession();
+          return;
+        }
+
+        console.warn(
+          'Falha ao atualizar a sessão. Mantendo credenciais para tentar novamente.',
+          error,
+        );
       }
     },
     [applySession, clearSession, token]
