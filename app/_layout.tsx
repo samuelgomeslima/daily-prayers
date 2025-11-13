@@ -63,6 +63,10 @@ export default function RootLayout() {
             options={{ title: 'Configurações' }}
           />
           <Stack.Screen
+            name="support"
+            options={{ title: 'Suporte' }}
+          />
+          <Stack.Screen
             name="modal"
             options={{ presentation: 'modal', title: 'Modal' }}
           />

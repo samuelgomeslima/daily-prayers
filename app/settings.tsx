@@ -1,3 +1,4 @@
+import { Link } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -350,6 +351,49 @@ export default function SettingsScreen() {
               />
             ))}
           </View>
+
+          <View style={styles.supportSection}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Suporte ao usuário
+            </ThemedText>
+            <ThemedText style={[styles.sectionDescription, { color: mutedText }]}>
+              Envie sugestões, relate problemas ou compartilhe elogios para que
+              possamos aprimorar sua experiência.
+            </ThemedText>
+            <Link href="/support" asChild>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.supportCard,
+                  {
+                    borderColor: `${palette.border}66`,
+                    backgroundColor: isDark ? `${palette.surfaceMuted}` : `${palette.surface}`,
+                    transform: [{ translateY: pressed ? 2 : 0 }],
+                  },
+                  pressed && { opacity: 0.95 },
+                ]}
+                android_ripple={{ color: `${palette.tint}1A` }}
+              >
+                <View
+                  style={[
+                    styles.supportIconWrapper,
+                    {
+                      backgroundColor: isDark ? `${palette.tint}22` : `${palette.tint}18`,
+                      borderColor: `${palette.tint}35`,
+                    },
+                  ]}
+                >
+                  <IconSymbol name="envelope.fill" size={22} color={palette.tint} />
+                </View>
+                <View style={styles.supportContent}>
+                  <ThemedText style={styles.supportTitle}>Fale com a equipe</ThemedText>
+                  <ThemedText style={styles.supportDescription} numberOfLines={2}>
+                    Preencha o formulário de suporte para enviar sua mensagem via e-mail.
+                  </ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={18} color={palette.tint} />
+              </Pressable>
+            </Link>
+          </View>
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -459,6 +503,43 @@ const styles = StyleSheet.create({
   sectionDescription: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  supportSection: {
+    gap: 16,
+  },
+  supportCard: {
+    marginTop: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  supportIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  supportContent: {
+    flex: 1,
+    gap: 4,
+  },
+  supportTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  supportDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.75,
   },
   optionButton: {
     borderWidth: 1,
