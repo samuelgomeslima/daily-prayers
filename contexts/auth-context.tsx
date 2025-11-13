@@ -88,20 +88,41 @@ async function loadSecureItem(key: string) {
 }
 
 async function fetchJson(input: string, init: RequestInit): Promise<any> {
-  const response = await fetch(input, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init.headers ?? {}),
-    },
-  });
+  let response: Response;
 
-  const data = await response.json().catch(() => null);
+  try {
+    response = await fetch(input, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (networkError) {
+    const error = new Error(
+      'Não foi possível conectar-se ao servidor. Verifique sua conexão com a internet ou as configurações da API e tente novamente.',
+    ) as Error & { status?: number; cause?: unknown };
+    error.cause = networkError;
+    throw error;
+  }
+
+  const data = await response
+    .json()
+    .catch(() => null)
+    .then((parsed) => parsed ?? null);
 
   if (!response.ok) {
-    const message = data?.error?.message ?? 'Não foi possível completar a operação.';
-    const error = new Error(message) as Error & { status?: number };
+    const message =
+      (data && typeof data === 'object'
+        ? (data as { error?: { message?: string }; message?: string })?.error?.message ??
+          (data as { message?: string }).message
+        : null) ??
+      (typeof data === 'string' && data.trim().length > 0 ? data : null) ??
+      `Não foi possível completar a operação (erro ${response.status}).`;
+
+    const error = new Error(message) as Error & { status?: number; response?: Response };
     error.status = response.status;
+    error.response = response;
     throw error;
   }
 
