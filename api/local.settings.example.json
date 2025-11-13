@@ -10,6 +10,10 @@
     "OPENAI_CATECHIST_MAX_TOKENS": "8192",
     "FILE_SEARCH_TOOL": "",
     "OPENAI_TRANSCRIBE_MODEL": "gpt-4o-mini-transcribe",
-    "OPENAI_PROXY_TOKEN": ""
+    "OPENAI_PROXY_TOKEN": "",
+    "SUPPORT_EMAIL_API_KEY": "",
+    "SUPPORT_EMAIL_FROM": "",
+    "SUPPORT_EMAIL_TO": "sgldeveloper@outlook.com",
+    "SUPPORT_EMAIL_ALLOWED_ORIGIN": "*"
   }
 }

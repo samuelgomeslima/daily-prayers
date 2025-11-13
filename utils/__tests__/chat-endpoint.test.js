@@ -2,8 +2,9 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  resolveApiEndpoint,
   resolveChatEndpoint,
-  _internal: { resolveExpoHost },
+  _internal: { resolveExpoHost, resolveBaseUrl },
 } = require('../chat-endpoint.js');
 
 function mergeDeep(target, source) {
@@ -36,6 +37,53 @@ function createConstants(overrides) {
 
   return mergeDeep(base, overrides);
 }
+
+describe('resolveApiEndpoint', () => {
+  it('returns the local path on web targets', () => {
+    const result = resolveApiEndpoint('/api/example', { env: { EXPO_OS: 'web' } });
+    assert.strictEqual(result, '/api/example');
+  });
+
+  it('defaults to EXPO_PUBLIC_API_BASE_URL and EXPO_PUBLIC_SITE_URL', () => {
+    const env = { EXPO_PUBLIC_API_BASE_URL: 'https://api.example.com' };
+    const result = resolveApiEndpoint('/api/example', { env });
+    assert.strictEqual(result, 'https://api.example.com/api/example');
+
+    const siteEnv = { EXPO_PUBLIC_SITE_URL: 'https://site.example.com' };
+    const siteResult = resolveApiEndpoint('/api/example', { env: siteEnv });
+    assert.strictEqual(siteResult, 'https://site.example.com/api/example');
+  });
+
+  it('honours custom environment key order', () => {
+    const env = { EXPO_PUBLIC_SPECIAL_BASE: 'https://special.example.com' };
+    const result = resolveApiEndpoint('/api/example', {
+      env,
+      envKeys: ['EXPO_PUBLIC_SPECIAL_BASE', 'EXPO_PUBLIC_API_BASE_URL'],
+    });
+    assert.strictEqual(result, 'https://special.example.com/api/example');
+  });
+
+  it('reads Expo manifest extras with custom keys', () => {
+    const constants = createConstants({ expoConfig: { extra: { specialBaseUrl: 'https://extras.example.com' } } });
+    const result = resolveApiEndpoint('/api/example', {
+      constants,
+      env: {},
+      extraKeys: ['specialBaseUrl', 'apiBaseUrl'],
+    });
+    assert.strictEqual(result, 'https://extras.example.com/api/example');
+  });
+
+  it('falls back to the Expo debugger host when no base URL is resolved', () => {
+    const constants = createConstants({ manifest: { debuggerHost: '192.168.0.42:19000' } });
+    const result = resolveApiEndpoint('/api/example', { constants, env: {} });
+    assert.strictEqual(result, 'http://192.168.0.42:4280/api/example');
+  });
+
+  it('returns null when no base URL or host can be resolved', () => {
+    const result = resolveApiEndpoint('/api/example', { constants: createConstants(), env: {} });
+    assert.strictEqual(result, null);
+  });
+});
 
 describe('resolveChatEndpoint', () => {
   it('returns the local API path when running on web', () => {
@@ -142,6 +190,15 @@ describe('resolveChatEndpoint', () => {
   it('returns null when no host or base URL can be resolved', () => {
     const result = resolveChatEndpoint({ constants: createConstants(), env: {} });
     assert.strictEqual(result, null);
+  });
+});
+
+describe('resolveBaseUrl', () => {
+  it('prefers environment values before manifest extras', () => {
+    const env = { EXPO_PUBLIC_CUSTOM: 'https://env.example.com' };
+    const constants = createConstants({ expoConfig: { extra: { custom: 'https://extra.example.com' } } });
+    const baseUrl = resolveBaseUrl(env, constants, ['EXPO_PUBLIC_CUSTOM'], ['custom']);
+    assert.strictEqual(baseUrl, 'https://env.example.com');
   });
 });
 

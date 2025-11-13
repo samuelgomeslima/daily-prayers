@@ -1,5 +1,4 @@
-import * as Linking from 'expo-linking';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -18,6 +17,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { resolveApiEndpoint } from '@/utils/chat-endpoint';
 
 const FEEDBACK_OPTIONS = [
   { value: 'suggestion', label: 'Sugestão' },
@@ -41,52 +41,79 @@ export default function SupportScreen() {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const typeLabel = useMemo(() => {
-    return FEEDBACK_OPTIONS.find((option) => option.value === feedbackType)?.label ?? 'Sugestão';
-  }, [feedbackType]);
+  const supportEndpoint = useMemo(
+    () =>
+      resolveApiEndpoint('/api/support-email', {
+        envKeys: ['EXPO_PUBLIC_SUPPORT_BASE_URL', 'EXPO_PUBLIC_API_BASE_URL', 'EXPO_PUBLIC_SITE_URL'],
+        extraKeys: ['supportBaseUrl', 'apiBaseUrl'],
+      }),
+    []
+  );
 
-  const handleSubmit = async () => {
-    if (!message.trim()) {
+  const handleSubmit = useCallback(async () => {
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage) {
       Alert.alert('Suporte', 'Descreva sua mensagem antes de enviar.');
+      return;
+    }
+
+    if (!supportEndpoint) {
+      Alert.alert(
+        'Suporte indisponível',
+        'Não foi possível determinar o endpoint de suporte. Verifique as variáveis EXPO_PUBLIC_SUPPORT_BASE_URL ou EXPO_PUBLIC_API_BASE_URL antes de tentar novamente.'
+      );
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const subject = encodeURIComponent(`Suporte Daily Prayers - ${typeLabel}`);
-      const bodyParts = [
-        `Tipo: ${typeLabel}`,
-        name.trim() ? `Nome: ${name.trim()}` : null,
-        contact.trim() ? `Contato: ${contact.trim()}` : null,
-        '',
-        message.trim(),
-      ].filter(Boolean);
-      const body = encodeURIComponent(bodyParts.join('\n'));
-      const mailtoUrl = `mailto:sgldeveloper@outlook.com?subject=${subject}&body=${body}`;
+      const response = await fetch(supportEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: feedbackType,
+          name: name.trim() || undefined,
+          contact: contact.trim() || undefined,
+          message: trimmedMessage,
+        }),
+      });
 
-      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (!response.ok) {
+        let extractedMessage: string | null = null;
 
-      if (!canOpen) {
-        throw new Error('MAILTO_UNAVAILABLE');
+        try {
+          const payload = await response.json();
+          const candidate = payload?.error?.message;
+          if (typeof candidate === 'string' && candidate.trim()) {
+            extractedMessage = candidate.trim();
+          }
+        } catch {
+          // ignore parsing errors and fall back to the default message
+        }
+
+        throw new Error(
+          extractedMessage ?? 'Não foi possível enviar sua mensagem agora. Tente novamente em instantes.'
+        );
       }
 
-      await Linking.openURL(mailtoUrl);
-
-      Alert.alert(
-        'Mensagem pronta',
-        'Abrimos seu aplicativo de e-mail com os detalhes preenchidos. Basta revisar e enviar.'
-      );
+      Alert.alert('Mensagem enviada', 'Recebemos sua mensagem e entraremos em contato se necessário.');
       setMessage('');
+      setName('');
+      setContact('');
     } catch (error) {
-      Alert.alert(
-        'Não foi possível iniciar o envio',
-        'Verifique se você possui um aplicativo de e-mail configurado neste dispositivo e tente novamente.'
-      );
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível enviar sua mensagem agora. Tente novamente em instantes.';
+      Alert.alert('Não foi possível enviar a mensagem', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [contact, feedbackType, message, name, supportEndpoint]);
 
   return (
     <ThemedView style={styles.safeArea}>
@@ -199,7 +226,7 @@ export default function SupportScreen() {
             >
               <IconSymbol name="paperplane.fill" size={18} color="#fff" />
               <ThemedText style={styles.submitLabel} lightColor="#fff" darkColor="#fff">
-                {isSubmitting ? 'Abrindo e-mail...' : 'Enviar mensagem'}
+                {isSubmitting ? 'Enviando...' : 'Enviar mensagem'}
               </ThemedText>
             </Pressable>
           </View>

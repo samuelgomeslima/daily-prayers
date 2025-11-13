@@ -7,6 +7,7 @@ export interface ExpoExtras {
   expoGo?: ExpoGoExtras | null;
   chatBaseUrl?: string | null;
   apiBaseUrl?: string | null;
+  [key: string]: unknown;
 }
 
 export interface ExpoConfigLike {
@@ -18,6 +19,7 @@ export interface ManifestExtras {
   expoGo?: ExpoGoExtras | null;
   chatBaseUrl?: string | null;
   apiBaseUrl?: string | null;
+  [key: string]: unknown;
 }
 
 export interface ManifestLike {
@@ -32,13 +34,26 @@ export interface ExpoConstantsLike {
   manifest?: ManifestLike | null;
 }
 
-export interface ResolveChatEndpointOptions {
+export interface ResolveApiEndpointOptions {
   env?: Record<string, string | undefined>;
   constants?: ExpoConstantsLike | null;
+  envKeys?: string[] | null;
+  extraKeys?: string[] | null;
 }
+
+export interface ResolveChatEndpointOptions extends ResolveApiEndpointOptions {}
+
+export declare function resolveApiEndpoint(
+  path: string,
+  options?: ResolveApiEndpointOptions | null
+): string | null;
 
 export declare function resolveChatEndpoint(
   options?: ResolveChatEndpointOptions | null
 ): string | null;
 
-export type { ExpoConstantsLike as ExpoConstants, ResolveChatEndpointOptions as ResolveChatEndpointParams };
+export type {
+  ExpoConstantsLike as ExpoConstants,
+  ResolveApiEndpointOptions as ResolveApiEndpointParams,
+  ResolveChatEndpointOptions as ResolveChatEndpointParams,
+};
