@@ -47,6 +47,32 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
    - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
    - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
+   - `NEON_DATABASE_URL` (**required for the notas module**) – Postgres connection string provided by Neon (e.g. `postgres://USER:PASSWORD@ep-restful-12345.us-east-1.aws.neon.tech/neondb`).
+
+   The API expects the connection string to include user, password, host and database. Neon already enforces TLS; keep the `sslmode=require` suffix if it is present in the generated URL.
+
+### Conectar ao banco de dados Neon
+
+1. Crie um projeto no [Neon](https://neon.tech/) e copie a **connection string** em formato `postgres://` (abra a aba **Connection Details** → **PSQL**).
+2. Execute o script [`api/sql/schema.sql`](api/sql/schema.sql) no banco recém-criado para gerar as tabelas necessárias:
+
+   ```bash
+   psql "$NEON_DATABASE_URL" -f api/sql/schema.sql
+   ```
+
+   > Se preferir usar o console online da Neon, cole o conteúdo do arquivo `schema.sql` diretamente no editor SQL e execute o script.
+
+3. Defina a variável `NEON_DATABASE_URL` no ambiente das Azure Functions (localmente em `api/local.settings.json` e no portal do Azure/Static Web Apps para produção).
+4. Configure `EXPO_PUBLIC_API_BASE_URL` apontando para a URL pública do aplicativo (a mesma utilizada para o chat). A aplicação móvel consumirá os endpoints REST abaixo:
+
+   - `POST /api/users/register` – cria usuários e retorna o token de sessão;
+   - `POST /api/users/login` – autentica e renova o token;
+   - `GET /api/notes` – lista apenas as anotações do usuário autenticado;
+   - `POST /api/notes` – cria novas anotações;
+   - `PUT /api/notes/{id}` – atualiza uma anotação existente pertencente ao usuário;
+   - `DELETE /api/notes/{id}` – remove anotações do próprio usuário.
+
+Somente usuários autenticados podem criar, editar ou visualizar anotações. O token retornado pelos endpoints de cadastro/login deve ser enviado no cabeçalho `Authorization: Bearer <token>` em todas as operações relacionadas a notas.
 
    > [!TIP]
    > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.

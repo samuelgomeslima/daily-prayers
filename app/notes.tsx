@@ -1,11 +1,11 @@
-import { documentDirectory, getInfoAsync, readAsStringAsync, writeAsStringAsync } from 'expo-file-system';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
-  ListRenderItem,
   Platform,
   Pressable,
+  RefreshControl,
   StyleSheet,
   TextInput,
   View,
@@ -15,48 +15,35 @@ import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { buildApiUrl } from '@/utils/api-endpoint';
+
+type NoteApiPayload = {
+  id: string;
+  title?: string;
+  content?: string;
+  created_at?: string;
+  updated_at?: string;
+};
 
 type Note = {
   id: string;
   title: string;
   content: string;
+  createdAt: string;
   updatedAt: string;
 };
 
-const NOTES_STORAGE_KEY = '@daily-prayers/notes';
-const NOTES_STORAGE_FILE = 'notes.json';
-
-function getStorageUri() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!documentDirectory) {
-    return null;
-  }
-
-  return `${documentDirectory}${NOTES_STORAGE_FILE}`;
-}
-
-function sanitizeNotes(payload: unknown): Note[] {
-  if (!Array.isArray(payload)) {
-    return [];
-  }
-
-  return payload
-    .filter((item): item is Partial<Note> & { id: unknown } => typeof item === 'object' && item !== null)
-    .map((item) => ({
-      id: typeof item.id === 'string' ? item.id : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      title: typeof item.title === 'string' ? item.title : '',
-      content: typeof item.content === 'string' ? item.content : '',
-      updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : new Date().toISOString(),
-    }));
-}
-
-function createNoteId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function normalizeNote(payload: NoteApiPayload): Note {
+  return {
+    id: payload.id,
+    title: typeof payload.title === 'string' ? payload.title : '',
+    content: typeof payload.content === 'string' ? payload.content : '',
+    createdAt: typeof payload.created_at === 'string' ? payload.created_at : new Date().toISOString(),
+    updatedAt: typeof payload.updated_at === 'string' ? payload.updated_at : new Date().toISOString(),
+  };
 }
 
 function formatUpdatedAt(value: string) {
@@ -85,17 +72,30 @@ function formatUpdatedAt(value: string) {
   }
 }
 
+function sortNotes(notes: Note[]) {
+  return [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
 export default function NotesScreen() {
+  const { user, token, isInitializing, signIn, signUp, signOut, apiBaseUrl } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
 
-  const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
-
   const surface = useThemeColor({}, 'surface');
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
   const borderColor = useThemeColor({}, 'border');
@@ -105,92 +105,75 @@ export default function NotesScreen() {
   const mutedText = useThemeColor({ light: '#646C9F', dark: '#A0A8D6' }, 'icon');
   const overlayColor = useThemeColor({}, 'overlay');
 
-  const inputBackground = surface;
-  const inputBorder = borderColor;
-
-  useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      try {
-        if (Platform.OS === 'web') {
-          if (typeof window === 'undefined' || !isMounted) {
-            return;
-          }
-
-          const stored = window.localStorage.getItem(NOTES_STORAGE_KEY);
-
-          if (!stored) {
-            return;
-          }
-
-          const parsed = JSON.parse(stored) as unknown;
-          const sanitized = sanitizeNotes(parsed);
-
-          if (isMounted) {
-            setNotes(sanitized);
-          }
-
-          return;
-        }
-
-        const storageUri = getStorageUri();
-
-        if (!storageUri) {
-          return;
-        }
-
-        const fileInfo = await getInfoAsync(storageUri);
-
-        if (!fileInfo.exists) {
-          return;
-        }
-
-        const content = await readAsStringAsync(storageUri);
-        const parsed = JSON.parse(content) as unknown;
-        const sanitized = sanitizeNotes(parsed);
-
-        if (isMounted) {
-          setNotes(sanitized);
-        }
-      } catch (error) {
-        console.error('Não foi possível carregar as anotações salvas.', error);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const persistNotes = useCallback(async (payload: Note[]) => {
-    try {
-      if (Platform.OS === 'web') {
-        if (typeof window === 'undefined') {
-          return;
-        }
-
-        window.localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(payload));
-        return;
-      }
-
-      const storageUri = getStorageUri();
-
-      if (!storageUri) {
-        return;
-      }
-
-      await writeAsStringAsync(storageUri, JSON.stringify(payload));
-    } catch (error) {
-      console.error('Não foi possível persistir as anotações.', error);
-    }
-  }, []);
+  const notesEndpoint = useMemo(() => buildApiUrl('/notes', apiBaseUrl), [apiBaseUrl]);
 
   const resetForm = useCallback(() => {
     setTitle('');
     setContent('');
     setEditingNoteId(null);
   }, []);
+
+  const fetchNotes = useCallback(async () => {
+    if (!token) {
+      setNotes([]);
+      return;
+    }
+
+    if (!notesEndpoint) {
+      setNotesError(
+        'Configure EXPO_PUBLIC_API_BASE_URL (ou reutilize EXPO_PUBLIC_CHAT_BASE_URL) para carregar as anotações do servidor.',
+      );
+      return;
+    }
+
+    setNotesError(null);
+    setIsFetching(true);
+
+    try {
+      const response = await fetch(notesEndpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data: { notes?: NoteApiPayload[]; message?: string } | null = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? 'Não foi possível carregar as anotações.');
+      }
+
+      const normalized = Array.isArray(data?.notes)
+        ? sortNotes(data.notes.map((item) => normalizeNote(item)))
+        : [];
+
+      setNotes(normalized);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado ao buscar as anotações.';
+      setNotesError(message);
+    } finally {
+      setIsFetching(false);
+    }
+  }, [notesEndpoint, token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchNotes();
+    } else {
+      setNotes([]);
+    }
+  }, [fetchNotes, token]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    await fetchNotes();
+    setIsRefreshing(false);
+  }, [fetchNotes, token]);
 
   const handleSaveNote = useCallback(async () => {
     const normalizedTitle = title.trim();
@@ -200,83 +183,133 @@ export default function NotesScreen() {
       return;
     }
 
+    if (!token) {
+      setNotesError('Faça login para salvar suas anotações.');
+      return;
+    }
+
+    if (!notesEndpoint) {
+      setNotesError(
+        'O endpoint de anotações não está configurado. Defina EXPO_PUBLIC_API_BASE_URL para continuar.',
+      );
+      return;
+    }
+
+    setNotesError(null);
     setIsSaving(true);
-    const timestamp = new Date().toISOString();
 
     try {
-      let nextNotes: Note[];
+      const isEditing = Boolean(editingNoteId);
+      const targetUrl = isEditing
+        ? `${notesEndpoint}/${encodeURIComponent(editingNoteId!)}`
+        : notesEndpoint;
 
-      if (editingNoteId) {
-        nextNotes = notes.map((note) =>
-          note.id === editingNoteId
-            ? { ...note, title: normalizedTitle, content: normalizedContent, updatedAt: timestamp }
-            : note,
-        );
-      } else {
-        const newNote: Note = {
-          id: createNoteId(),
-          title: normalizedTitle,
-          content: normalizedContent,
-          updatedAt: timestamp,
-        };
-        nextNotes = [...notes, newNote];
+      const response = await fetch(targetUrl, {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: normalizedTitle, content: normalizedContent }),
+      });
+
+      const data: { note?: NoteApiPayload; message?: string } = await response.json();
+
+      if (!response.ok || !data.note) {
+        throw new Error(data?.message ?? 'Não foi possível salvar a anotação.');
       }
 
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      const savedNote = normalizeNote(data.note);
+
+      setNotes((current) => {
+        const next = isEditing
+          ? current.map((note) => (note.id === savedNote.id ? savedNote : note))
+          : [savedNote, ...current];
+        return sortNotes(next);
+      });
+
       resetForm();
     } catch (error) {
-      console.error('Não foi possível salvar a anotação.', error);
+      const message = error instanceof Error ? error.message : 'Erro inesperado ao salvar a anotação.';
+      setNotesError(message);
     } finally {
       setIsSaving(false);
     }
-  }, [content, editingNoteId, notes, persistNotes, resetForm, title]);
+  }, [content, editingNoteId, notesEndpoint, resetForm, title, token]);
 
-  const handleSelectNote = useCallback(
-    (note: Note) => {
-      setEditingNoteId(note.id);
-      setTitle(note.title);
-      setContent(note.content);
-    },
-    [],
-  );
+  const handleSelectNote = useCallback((note: Note) => {
+    setEditingNoteId(note.id);
+    setTitle(note.title);
+    setContent(note.content);
+  }, []);
 
   const handleDeleteNote = useCallback(
     async (id: string) => {
-      const nextNotes = notes.filter((note) => note.id !== id);
-      setNotes(nextNotes);
-      await persistNotes(nextNotes);
+      if (!token) {
+        setNotesError('Faça login para remover anotações.');
+        return;
+      }
 
-      if (editingNoteId === id) {
-        resetForm();
+      if (!notesEndpoint) {
+        setNotesError('O endpoint de anotações não está configurado.');
+        return;
+      }
+
+      try {
+        setNotesError(null);
+        const response = await fetch(`${notesEndpoint}/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 204) {
+          setNotes((current) => current.filter((note) => note.id !== id));
+
+          if (editingNoteId === id) {
+            resetForm();
+          }
+
+          return;
+        }
+
+        const data: { message?: string } = await response.json().catch(() => ({ message: undefined }));
+
+        if (response.status === 404) {
+          setNotes((current) => current.filter((note) => note.id !== id));
+          if (editingNoteId === id) {
+            resetForm();
+          }
+          return;
+        }
+
+        throw new Error(data?.message ?? 'Não foi possível remover a anotação.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro inesperado ao remover a anotação.';
+        setNotesError(message);
       }
     },
-    [editingNoteId, notes, persistNotes, resetForm],
+    [editingNoteId, notesEndpoint, resetForm, token],
   );
-
-  const sortedNotes = useMemo(() => {
-    return [...notes].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    );
-  }, [notes]);
 
   const filteredNotes = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
     if (!query) {
-      return sortedNotes;
+      return notes;
     }
 
-    return sortedNotes.filter((note) => {
+    return notes.filter((note) => {
       const haystack = `${note.title} ${note.content}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [searchTerm, sortedNotes]);
+  }, [notes, searchTerm]);
 
   const isSaveDisabled = isSaving || (!title.trim() && !content.trim());
 
-  const renderItem: ListRenderItem<Note> = useCallback(
-    ({ item }) => {
+  const renderItem = useCallback(
+    ({ item }: { item: Note }) => {
       const isActive = editingNoteId === item.id;
 
       return (
@@ -325,8 +358,7 @@ export default function NotesScreen() {
                 style={[
                   styles.deleteButtonLabel,
                   { color: colorScheme === 'dark' ? '#FFB4C2' : '#C81F4A' },
-                ]}
-              >
+                ]}>
                 Excluir
               </ThemedText>
             </Pressable>
@@ -337,19 +369,129 @@ export default function NotesScreen() {
         </Pressable>
       );
     },
-    [
-      accentColor,
-      borderColor,
-      colorScheme,
-      editingNoteId,
-      handleDeleteNote,
-      handleSelectNote,
-      mutedText,
-      overlayColor,
-      palette,
-      surface,
-    ],
+    [accentColor, borderColor, colorScheme, editingNoteId, handleDeleteNote, handleSelectNote, mutedText, overlayColor, palette, surface],
   );
+
+  const handleToggleAuthMode = useCallback(() => {
+    setAuthMode((current) => (current === 'login' ? 'register' : 'login'));
+    setAuthError(null);
+  }, []);
+
+  const handleAuthSubmit = useCallback(async () => {
+    const normalizedEmail = authEmail.trim().toLowerCase();
+    const normalizedPassword = authPassword.trim();
+
+    if (!normalizedEmail || !normalizedPassword) {
+      setAuthError('Informe e-mail e senha para continuar.');
+      return;
+    }
+
+    setIsAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      if (authMode === 'login') {
+        await signIn(normalizedEmail, normalizedPassword);
+      } else {
+        await signUp(normalizedEmail, normalizedPassword);
+      }
+
+      setAuthEmail('');
+      setAuthPassword('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível concluir a operação.';
+      setAuthError(message);
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  }, [authEmail, authMode, authPassword, signIn, signUp]);
+
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    resetForm();
+    setNotes([]);
+  }, [resetForm, signOut]);
+
+  if (isInitializing) {
+    return (
+      <View style={[styles.flex, styles.centered]}>
+        <ActivityIndicator size="large" color={accentColor} />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}>
+        <ThemedView style={[styles.container, styles.centered]}>
+          <HolySpiritSymbol size={200} opacity={0.12} style={styles.symbolTop} pointerEvents="none" />
+          <HolySpiritSymbol size={160} opacity={0.1} style={styles.symbolBottom} pointerEvents="none" />
+          <ThemedView
+            style={[styles.authCard, { borderColor: `${borderColor}80` }]}
+            lightColor={Colors.light.surface}
+            darkColor={Colors.dark.surface}>
+            <ThemedText type="title" style={styles.screenTitle}>
+              {authMode === 'login' ? 'Acesse suas anotações' : 'Crie sua conta gratuita'}
+            </ThemedText>
+            <ThemedText style={[styles.lead, { color: mutedText }]}>Somente usuários autenticados podem salvar anotações no servidor seguro.</ThemedText>
+            <TextInput
+              value={authEmail}
+              onChangeText={setAuthEmail}
+              placeholder="Seu e-mail"
+              placeholderTextColor={placeholderColor}
+              style={[
+                styles.input,
+                { backgroundColor: surface, borderColor, color: inputText },
+              ]}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+            />
+            <TextInput
+              value={authPassword}
+              onChangeText={setAuthPassword}
+              placeholder="Senha"
+              placeholderTextColor={placeholderColor}
+              style={[
+                styles.input,
+                { backgroundColor: surface, borderColor, color: inputText },
+              ]}
+              secureTextEntry
+              textContentType="password"
+            />
+            {authError ? (
+              <ThemedText style={styles.errorMessage}>{authError}</ThemedText>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleAuthSubmit}
+              disabled={isAuthSubmitting}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                { backgroundColor: accentColor },
+                pressed && !isAuthSubmitting && styles.primaryButtonPressed,
+                isAuthSubmitting && styles.primaryButtonDisabled,
+              ]}>
+              <ThemedText style={styles.primaryButtonLabel}>
+                {authMode === 'login' ? 'Entrar' : 'Cadastrar'}
+              </ThemedText>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={handleToggleAuthMode}>
+              <ThemedText style={[styles.switchAuthMode, { color: accentColor }]}>
+                {authMode === 'login'
+                  ? 'Quero criar uma conta agora'
+                  : 'Já tenho conta, voltar ao login'}
+              </ThemedText>
+            </Pressable>
+          </ThemedView>
+        </ThemedView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -364,14 +506,27 @@ export default function NotesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={accentColor}
+              colors={[accentColor]}
+            />
+          }
           ListHeaderComponent={
             <View style={styles.header}>
               <ThemedText type="title" style={styles.screenTitle}>
                 Anotações
               </ThemedText>
-              <ThemedText style={[styles.lead, { color: mutedText }]}>
-                Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.
-              </ThemedText>
+              <ThemedText style={[styles.lead, { color: mutedText }]}>Salve insights, lembretes de oração e pesquisas rápidas para retomar depois.</ThemedText>
+              {notesError ? (
+                <ThemedView style={[styles.errorBanner, { borderColor: `${palette.tint}40` }]}
+                  lightColor={Colors.light.surface}
+                  darkColor={Colors.dark.surface}>
+                  <ThemedText style={[styles.errorMessage, { textAlign: 'left' }]}>{notesError}</ThemedText>
+                </ThemedView>
+              ) : null}
               <TextInput
                 value={searchTerm}
                 onChangeText={setSearchTerm}
@@ -379,7 +534,7 @@ export default function NotesScreen() {
                 placeholderTextColor={placeholderColor}
                 style={[
                   styles.input,
-                  { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
+                  { backgroundColor: surface, borderColor, color: inputText },
                 ]}
                 autoCapitalize="sentences"
                 autoCorrect
@@ -400,7 +555,7 @@ export default function NotesScreen() {
                   placeholderTextColor={placeholderColor}
                   style={[
                     styles.input,
-                    { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
+                    { backgroundColor: surface, borderColor, color: inputText },
                   ]}
                   accessibilityLabel="Título da anotação"
                   autoCapitalize="sentences"
@@ -413,7 +568,7 @@ export default function NotesScreen() {
                   placeholderTextColor={placeholderColor}
                   style={[
                     styles.textarea,
-                    { backgroundColor: inputBackground, borderColor: inputBorder, color: inputText },
+                    { backgroundColor: surface, borderColor, color: inputText },
                   ]}
                   accessibilityLabel="Conteúdo da anotação"
                   multiline
@@ -446,11 +601,16 @@ export default function NotesScreen() {
                       isSaveDisabled && styles.primaryButtonDisabled,
                     ]}>
                     <ThemedText style={styles.primaryButtonLabel}>
-                      {editingNoteId ? 'Atualizar anotação' : 'Salvar anotação'}
+                      {isSaving ? 'Salvando...' : editingNoteId ? 'Atualizar anotação' : 'Salvar anotação'}
                     </ThemedText>
                   </Pressable>
                 </View>
               </ThemedView>
+              <Pressable accessibilityRole="button" onPress={handleSignOut}>
+                <ThemedText style={[styles.signOutLink, { color: accentColor }]}>
+                  Encerrar sessão
+                </ThemedText>
+              </Pressable>
             </View>
           }
           ListEmptyComponent={
@@ -458,12 +618,18 @@ export default function NotesScreen() {
               style={styles.emptyState}
               lightColor={Colors.light.surfaceMuted}
               darkColor={Colors.dark.surfaceMuted}>
-              <ThemedText style={styles.emptyStateTitle}>Nenhuma anotação encontrada</ThemedText>
-              <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
-                {searchTerm
-                  ? 'Tente ajustar os termos de busca para localizar uma anotação existente.'
-                  : 'Escreva sua primeira anotação acima para organizar pensamentos e inspirações.'}
-              </ThemedText>
+              {isFetching ? (
+                <ActivityIndicator size="small" color={accentColor} />
+              ) : (
+                <>
+                  <ThemedText style={styles.emptyStateTitle}>Nenhuma anotação encontrada</ThemedText>
+                  <ThemedText style={[styles.emptyStateSubtitle, { color: mutedText }]}>
+                    {searchTerm
+                      ? 'Tente ajustar os termos de busca para localizar uma anotação existente.'
+                      : 'Escreva sua primeira anotação acima para organizar pensamentos e inspirações.'}
+                  </ThemedText>
+                </>
+              )}
             </ThemedView>
           }
           keyboardShouldPersistTaps="handled"
@@ -476,6 +642,10 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   container: {
     flex: 1,
@@ -520,11 +690,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    minHeight: 120,
     fontSize: 16,
+    minHeight: 140,
   },
   formCard: {
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 20,
     gap: 16,
     shadowOpacity: 0.18,
@@ -648,5 +818,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 280,
+  },
+  authCard: {
+    width: '88%',
+    maxWidth: 420,
+    borderRadius: 24,
+    padding: 24,
+    gap: 16,
+    borderWidth: 1,
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+  },
+  errorMessage: {
+    color: '#D6456A',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  switchAuthMode: {
+    marginTop: 8,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  errorBanner: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 4,
+  },
+  signOutLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    alignSelf: 'flex-end',
   },
 });
