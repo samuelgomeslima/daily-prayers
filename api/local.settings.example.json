@@ -11,6 +11,8 @@
     "FILE_SEARCH_TOOL": "",
     "OPENAI_TRANSCRIBE_MODEL": "gpt-4o-mini-transcribe",
     "OPENAI_PROXY_TOKEN": "",
+    "NEON_DATA_API_URL": "https://YOUR-ENDPOINT/neondb/rest/v1",
+    "NEON_DATA_API_KEY": "",
     "NEON_DATABASE_URL": "postgres://USER:PASSWORD@HOST/dbname"
   }
 }

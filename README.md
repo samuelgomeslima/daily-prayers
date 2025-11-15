@@ -47,7 +47,9 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
    - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
    - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
-   - `NEON_DATABASE_URL` (**required for the notas module**) – Postgres connection string provided by Neon (e.g. `postgres://USER:PASSWORD@ep-restful-12345.us-east-1.aws.neon.tech/neondb`).
+  - `NEON_DATABASE_URL` (**required for the notas module when using direct SQL access**) – Postgres connection string provided by Neon (e.g. `postgres://USER:PASSWORD@ep-restful-12345.us-east-1.aws.neon.tech/neondb`).
+  - `NEON_DATA_API_URL` (optional) – Neon Data API endpoint such as `https://<your-endpoint>/neondb/rest/v1`. When this is set the API will automatically route all database reads and writes through Neon’s Data API instead of the classic SQL-over-HTTP endpoint.
+  - `NEON_DATA_API_KEY` (optional) – API key generated in the Neon dashboard. Required when `NEON_DATA_API_URL` is defined.
 
    The API expects the connection string to include user, password, host and database. Neon already enforces TLS; keep the `sslmode=require` suffix if it is present in the generated URL.
 
@@ -62,7 +64,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    > Se preferir usar o console online da Neon, cole o conteúdo do arquivo `schema.sql` diretamente no editor SQL e execute o script.
 
-3. Defina a variável `NEON_DATABASE_URL` no ambiente das Azure Functions (localmente em `api/local.settings.json` e no portal do Azure/Static Web Apps para produção).
+3. Defina as variáveis `NEON_DATABASE_URL` **ou** (`NEON_DATA_API_URL` + `NEON_DATA_API_KEY`) no ambiente das Azure Functions (localmente em `api/local.settings.json` e no portal do Azure/Static Web Apps para produção).
 4. Configure `EXPO_PUBLIC_API_BASE_URL` apontando para a URL pública do aplicativo (a mesma utilizada para o chat). A aplicação móvel consumirá os endpoints REST abaixo:
 
    - `POST /api/users/register` – cria usuários e retorna o token de sessão;
@@ -73,6 +75,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `DELETE /api/notes/{id}` – remove anotações do próprio usuário.
 
 Somente usuários autenticados podem criar, editar ou visualizar anotações. O token retornado pelos endpoints de cadastro/login deve ser enviado no cabeçalho `Authorization: Bearer <token>` em todas as operações relacionadas a notas.
+
+### Usando a Neon Data API
+
+Para um passo a passo completo de como habilitar o Data API, configurar variáveis de ambiente e testar consultas utilizando o endpoint REST, consulte o guia [api/NEON_DATA_API_GUIDE.md](api/NEON_DATA_API_GUIDE.md).
 
    > [!TIP]
    > `EXPO_PUBLIC_CHAT_BASE_URL` must be available **wherever the Expo bundle is built** so that native apps can call the proxy. When Azure Static Web Apps builds the project via the generated GitHub Action, define this variable as a GitHub repository secret (Settings → Secrets and variables → Actions) and expose it in the workflow. If you build elsewhere, configure the same variable in that environment before running `expo start`/`expo export`.
