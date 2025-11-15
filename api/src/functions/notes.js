@@ -119,7 +119,7 @@ app.http('notes', {
       }
     }
 
-    const noteId = request.params.get('id');
+    const noteId = request.params?.id;
 
     if (!noteId) {
       return {
