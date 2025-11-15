@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { AuthProvider } from '@/contexts/auth-context';
 import { ModelSettingsProvider } from '@/contexts/model-settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
@@ -42,33 +43,20 @@ export default function RootLayout() {
   const statusBarStyle = colorScheme === 'dark' ? 'light' : 'dark';
 
   return (
-    <ModelSettingsProvider>
-      <ThemeProvider value={navigationTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="chat"
-            options={{ title: 'IA Católica' }}
-          />
-          <Stack.Screen
-            name="life-plan"
-            options={{ title: 'Plano de Vida', headerShown: false }}
-          />
-          <Stack.Screen
-            name="notes"
-            options={{ title: 'Anotações' }}
-          />
-          <Stack.Screen
-            name="settings"
-            options={{ title: 'Configurações' }}
-          />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: 'modal', title: 'Modal' }}
-          />
-        </Stack>
-        <StatusBar style={statusBarStyle} backgroundColor={navigationTheme.colors.background} />
-      </ThemeProvider>
-    </ModelSettingsProvider>
+    <AuthProvider>
+      <ModelSettingsProvider>
+        <ThemeProvider value={navigationTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="chat" options={{ title: 'IA Católica' }} />
+            <Stack.Screen name="life-plan" options={{ title: 'Plano de Vida', headerShown: false }} />
+            <Stack.Screen name="notes" options={{ title: 'Anotações' }} />
+            <Stack.Screen name="settings" options={{ title: 'Configurações' }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style={statusBarStyle} backgroundColor={navigationTheme.colors.background} />
+        </ThemeProvider>
+      </ModelSettingsProvider>
+    </AuthProvider>
   );
 }
