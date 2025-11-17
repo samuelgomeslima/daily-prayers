@@ -39,9 +39,15 @@ type PrayerBeadTrackerProps = {
   sequence: PrayerSequence;
   initialState?: PrayerBeadTrackerState;
   onStateChange?: (state: PrayerBeadTrackerState) => void;
+  variant?: 'card' | 'flat';
 };
 
-export function PrayerBeadTracker({ sequence, initialState, onStateChange }: PrayerBeadTrackerProps) {
+export function PrayerBeadTracker({
+  sequence,
+  initialState,
+  onStateChange,
+  variant = 'card',
+}: PrayerBeadTrackerProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const accentColor = useThemeColor({}, 'tint');
@@ -192,11 +198,17 @@ export function PrayerBeadTracker({ sequence, initialState, onStateChange }: Pra
     });
   };
 
+  const containerStyle = [
+    styles.container,
+    { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}1F` },
+    variant === 'flat' && styles.flatContainer,
+  ];
+
   return (
     <ThemedView
-      style={[styles.container, { borderColor: `${borderColor}88`, shadowColor: `${palette.tint}1F` }]}
-      lightColor={Colors.light.surface}
-      darkColor={Colors.dark.surface}
+      style={containerStyle}
+      lightColor={variant === 'flat' ? 'transparent' : Colors.light.surface}
+      darkColor={variant === 'flat' ? 'transparent' : Colors.dark.surface}
     >
       <View style={styles.header}>
         <ThemedText type="subtitle" style={[styles.title, { fontFamily: Fonts.serif }] }>
@@ -422,6 +434,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  flatContainer: {
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    backgroundColor: 'transparent',
+    marginBottom: 0,
   },
   header: {
     gap: 8,
