@@ -85,8 +85,8 @@ const rosarySequence: PrayerSequence = {
 
 const createMysterySetSequence = (set: MysterySet): PrayerSequence => ({
   id: `rosary-${set.id}`,
-  name: `Santo Rosário — ${set.title}`,
-  description: `Reze com os ${set.title}, propostos para ${set.days}, seguindo o método de São Luís Maria Grignion de Montfort.`,
+  name: `Santo Terço — ${set.title}`,
+  description: `Reze o terço com os ${set.title}, propostos para ${set.days}, seguindo o método de São Luís Maria Grignion de Montfort.`,
   sections: [
     createOpeningSection(`rosary-${set.id}`),
     ...createMysterySections(set, `set-${set.id}`),
@@ -476,12 +476,6 @@ export default function RosariesScreen() {
             darkColor={Colors.dark.surface}
           >
             <View style={styles.modalHeader}>
-              <ThemedText
-                type="subtitle"
-                style={[styles.modalTitle, { fontFamily: Fonts.serif }]}
-              >
-                {activeModalSequence?.name}
-              </ThemedText>
               <Pressable
                 onPress={closeModal}
                 accessibilityRole="button"
@@ -503,6 +497,7 @@ export default function RosariesScreen() {
                       [activeModalSequence.id]: state,
                     }));
                   }}
+                  variant="flat"
                 />
               ) : null}
             </ScrollView>
@@ -608,11 +603,8 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: 16,
-  },
-  modalTitle: {
-    flex: 1,
   },
   modalCloseButton: {
     padding: 4,
