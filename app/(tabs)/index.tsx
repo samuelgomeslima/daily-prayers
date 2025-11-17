@@ -19,27 +19,7 @@ export default function HomeScreen() {
   const palette = Colors[colorScheme];
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{
-        light: Colors.light.heroBackground,
-        dark: Colors.dark.heroBackground,
-      }}
-      headerImage={
-        <View style={styles.headerImage}>
-          <View
-            style={[styles.headerOrb, { backgroundColor: palette.heroAccent }]}
-          />
-          <View
-            style={[
-              styles.headerHalo,
-              {
-                borderColor: palette.overlay,
-              },
-            ]}
-          />
-          <HolySpiritSymbol size={220} opacity={0.75} style={styles.headerSymbol} />
-        </View>
-      }>
+    <ParallaxScrollView>
       <ThemedView style={styles.titleContainer}>
         <HolySpiritSymbol size={110} opacity={0.22} style={styles.titleSymbol} />
         <ThemedText type="title" style={styles.title}>
@@ -176,31 +156,6 @@ function FeatureCard({ title, children }: FeatureCardProps) {
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  headerOrb: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 200,
-    opacity: 0.45,
-    transform: [{ translateY: 24 }],
-  },
-  headerHalo: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 260,
-    borderWidth: 3,
-    opacity: 0.6,
-  },
-  headerSymbol: {
-    transform: [{ translateY: 32 }],
-  },
   titleContainer: {
     gap: 12,
     marginBottom: 24,
