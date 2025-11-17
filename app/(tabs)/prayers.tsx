@@ -106,39 +106,46 @@ export default function PrayersScreen() {
           </ThemedText>
         </ThemedView>
       ) : (
-        filteredPrayers.map((prayer) => (
-          <Pressable
-            key={prayer.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Visualizar a oração ${prayer.title}`}
-            onPress={() => handleSelectPrayer(prayer)}
-            style={({ pressed }) => [
-              styles.prayerPressable,
-              pressed && styles.prayerPressablePressed,
-            ]}
-          >
-            <ThemedView
-              style={[
-                styles.prayerCard,
-                {
-                  borderColor: `${palette.border}99`,
-                  shadowColor: `${palette.tint}1A`,
-                },
+        <View style={styles.prayerList}>
+          {filteredPrayers.map((prayer) => (
+            <Pressable
+              key={prayer.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Visualizar a oração ${prayer.title}`}
+              onPress={() => handleSelectPrayer(prayer)}
+              style={({ pressed }) => [
+                styles.prayerPressable,
+                pressed && styles.prayerPressablePressed,
               ]}
-              lightColor={Colors.light.surface}
-              darkColor={Colors.dark.surface}
             >
-              <View style={styles.prayerHeader}>
-                <ThemedText
-                  type="subtitle"
-                  style={[styles.prayerTitle, { fontFamily: Fonts.serif }]}
-                >
-                  {prayer.title}
-                </ThemedText>
-              </View>
-            </ThemedView>
-          </Pressable>
-        ))
+              <ThemedView
+                style={[
+                  styles.prayerCard,
+                  {
+                    borderColor: `${palette.border}99`,
+                    shadowColor: `${palette.tint}1A`,
+                  },
+                ]}
+                lightColor={Colors.light.surface}
+                darkColor={Colors.dark.surface}
+              >
+                <View style={styles.prayerHeader}>
+                  <ThemedText
+                    type="subtitle"
+                    style={[styles.prayerTitle, { fontFamily: Fonts.serif }]}
+                  >
+                    {prayer.title}
+                  </ThemedText>
+                  <IconSymbol
+                    name="chevron.right.circle.fill"
+                    size={20}
+                    color={palette.tint}
+                  />
+                </View>
+              </ThemedView>
+            </Pressable>
+          ))}
+        </View>
       )}
       <Modal
         animationType="slide"
@@ -251,7 +258,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 18,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -266,27 +273,31 @@ const styles = StyleSheet.create({
   lead: {
     lineHeight: 22,
   },
+  prayerList: {
+    gap: 10,
+    marginTop: 4,
+  },
   prayerPressable: {
-    marginTop: 12,
+    borderRadius: 16,
   },
   prayerPressablePressed: {
     transform: [{ scale: 0.99 }],
   },
   prayerCard: {
     borderWidth: 1,
-    borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 18,
-    shadowOpacity: 0.08,
-    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    shadowOpacity: 0.07,
+    gap: 6,
   },
   prayerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   prayerTitle: {
     fontSize: 18,
@@ -326,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   searchInput: {
     fontSize: 16,
