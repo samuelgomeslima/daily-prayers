@@ -137,7 +137,7 @@ export default function PrayersScreen() {
                     {prayer.title}
                   </ThemedText>
                   <IconSymbol
-                    name="chevron.right.circle.fill"
+                    name="chevron.right"
                     size={20}
                     color={palette.tint}
                   />
