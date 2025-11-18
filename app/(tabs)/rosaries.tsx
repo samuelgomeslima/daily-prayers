@@ -366,26 +366,10 @@ export default function RosariesScreen() {
 
   return (
     <>
-      <ParallaxScrollView
-      headerBackgroundColor={{
-        light: Colors.light.heroAccent,
-        dark: Colors.dark.heroAccent,
-      }}
-      headerImage={
-        <View style={styles.headerImage}>
-          <View style={[styles.headerGlow, { backgroundColor: `${palette.tint}1A` }]} />
-          <HolySpiritSymbol size={220} opacity={0.8} style={styles.headerSymbol} />
-          <IconSymbol
-            size={72}
-            color={palette.tint}
-            name="sparkles"
-            style={styles.headerIcon}
-          />
-        </View>
-      }>
+      <ParallaxScrollView>
       <ThemedView style={styles.titleContainer}>
         <HolySpiritSymbol size={96} opacity={0.18} style={styles.titleSymbol} />
-        <ThemedText type="title" style={[styles.title, { fontFamily: Fonts.rounded }]}> 
+        <ThemedText type="title" style={[styles.title, { fontFamily: Fonts.rounded }]}>
           Terços
         </ThemedText>
         <ThemedText style={styles.lead}>
@@ -509,29 +493,6 @@ export default function RosariesScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  headerGlow: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 220,
-    opacity: 0.6,
-    transform: [{ translateY: 32 }],
-  },
-  headerSymbol: {
-    transform: [{ translateY: 30 }],
-  },
-  headerIcon: {
-    position: 'absolute',
-    bottom: 32,
-    right: 48,
-    opacity: 0.5,
-  },
   titleContainer: {
     gap: 12,
     marginBottom: 24,
