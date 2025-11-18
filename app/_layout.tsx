@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/auth-context';
 import { ModelSettingsProvider } from '@/contexts/model-settings-context';
+import { ThemeSettingsProvider } from '@/contexts/theme-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
@@ -13,6 +14,14 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  return (
+    <ThemeSettingsProvider>
+      <RootLayoutProviders />
+    </ThemeSettingsProvider>
+  );
+}
+
+function RootLayoutProviders() {
   const colorScheme = useColorScheme();
 
   const lightTheme = {
