@@ -14,6 +14,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useModelSettings } from '@/contexts/model-settings-context';
+import { ThemePreference, useThemeSettings } from '@/contexts/theme-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { resolveChatEndpoint } from '@/utils/chat-endpoint';
@@ -32,18 +33,22 @@ type AiAvailabilityState =
 
 type ModelOptionButtonProps = {
   label: string;
+  description?: string;
   selected: boolean;
   disabled: boolean;
   onPress: () => void;
   accentColor: string;
+  mutedColor: string;
 };
 
 function ModelOptionButton({
   label,
+  description,
   selected,
   disabled,
   onPress,
   accentColor,
+  mutedColor,
 }: ModelOptionButtonProps) {
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
   const borderColor = useThemeColor({}, 'border');
@@ -61,7 +66,14 @@ function ModelOptionButton({
         disabled && { opacity: 0.6 },
       ]}
     >
-      <ThemedText style={styles.optionLabel}>{label}</ThemedText>
+      <View style={styles.optionContent}>
+        <ThemedText style={styles.optionLabel}>{label}</ThemedText>
+        {description ? (
+          <ThemedText style={[styles.optionDescription, { color: mutedColor }]}> 
+            {description}
+          </ThemedText>
+        ) : null}
+      </View>
       {selected ? (
         <IconSymbol name="checkmark.circle.fill" size={24} color={accentColor} />
       ) : null}
@@ -70,6 +82,8 @@ function ModelOptionButton({
 }
 
 export default function SettingsScreen() {
+  const { preference: themePreference, setPreference: setThemePreference, isLoading: isThemeLoading } =
+    useThemeSettings();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
@@ -208,6 +222,24 @@ export default function SettingsScreen() {
     }
   }, [availability.status, isDark]);
 
+  const themeOptions: { value: ThemePreference; label: string; description: string }[] = [
+    {
+      value: 'system',
+      label: 'Tema do sistema',
+      description: 'Usa automaticamente o tema configurado no seu dispositivo.',
+    },
+    {
+      value: 'light',
+      label: 'Tema claro',
+      description: 'Fundo claro com contrastes suaves para leitura durante o dia.',
+    },
+    {
+      value: 'dark',
+      label: 'Tema escuro',
+      description: 'Visual noturno com menor brilho e tons profundos.',
+    },
+  ];
+
   const availabilityMessage = useMemo(() => {
     if (availability.status === 'available') {
       return 'A IA está respondendo normalmente.';
@@ -238,6 +270,27 @@ export default function SettingsScreen() {
             Personalize quais modelos de IA serão utilizados nos assistentes do
             aplicativo.
           </ThemedText>
+
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Tema do aplicativo
+            </ThemedText>
+            <ThemedText style={[styles.sectionDescription, { color: mutedText }]}>
+              Escolha seguir o tema do sistema ou defina manualmente o visual do app.
+            </ThemedText>
+            {themeOptions.map((option) => (
+              <ModelOptionButton
+                key={`theme-${option.value}`}
+                label={option.label}
+                description={option.description}
+                selected={themePreference === option.value}
+                onPress={() => setThemePreference(option.value)}
+                disabled={isThemeLoading}
+                accentColor={palette.tint}
+                mutedColor={mutedText}
+              />
+            ))}
+          </View>
 
           <View
             style={[
@@ -327,6 +380,7 @@ export default function SettingsScreen() {
                 onPress={() => setCatechistModel(item.value)}
                 disabled={isLoading}
                 accentColor={palette.tint}
+                mutedColor={mutedText}
               />
             ))}
           </View>
@@ -347,6 +401,7 @@ export default function SettingsScreen() {
                 onPress={() => setChatModel(item.value)}
                 disabled={isLoading}
                 accentColor={palette.tint}
+                mutedColor={mutedText}
               />
             ))}
           </View>
@@ -474,9 +529,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 1,
   },
+  optionContent: {
+    flex: 1,
+    gap: 4,
+  },
   optionLabel: {
     fontSize: 16,
     flex: 1,
+  },
+  optionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   symbolTop: {
     position: 'absolute',
