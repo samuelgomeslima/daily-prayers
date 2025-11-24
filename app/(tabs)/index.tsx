@@ -32,25 +32,14 @@ export default function HomeScreen() {
       </ThemedView>
 
       <FeatureCard title="Liturgia Diária (Brasil)">
-        <ThemedText style={styles.cardText}>
-          Conteúdo sincronizado com o portal da Canção Nova, garantindo acesso às leituras,
-          salmos e orações publicados em{' '}
+        <View style={styles.actions}>
           <ExternalLink href="https://liturgia.cancaonova.com/pb/">
             <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
           </ExternalLink>
-          . Respeitamos o formato original exibindo o link oficial em todas as sessões do app.
-        </ThemedText>
-        <ThemedText style={styles.cardNote}>
-          • Conteúdo armazenado localmente apenas para leitura offline temporária, sempre
-          com sincronização direta diária da fonte oficial.
-        </ThemedText>
+        </View>
       </FeatureCard>
 
       <FeatureCard title="Horários de Missas e Confissões">
-        <ThemedText style={styles.cardText}>
-          Não há API nacional unificada. Mantemos cadastro manual colaborativo e indicamos o
-          guia atualizado da Arquidiocese de Belo Horizonte para ampliar a cobertura.
-        </ThemedText>
         <View style={styles.actions}>
           <ExternalLink href="https://www.missadiariabh.com/missadiaria">
             <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
@@ -59,66 +48,28 @@ export default function HomeScreen() {
             <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
           </ExternalLink>
         </View>
-        <ThemedText style={styles.cardNote}>
-          • Fichas cadastradas pela comunidade contam com revisão editorial, e os deep links
-          levam direto aos horários oficiais mantidos pela arquidiocese.
-        </ThemedText>
       </FeatureCard>
 
       <FeatureCard title="Santo do Dia">
-        <ThemedText style={styles.cardText}>
-          Consumimos portais católicos confiáveis, como Canção Nova, e mantemos cache
-          diário para reduzir acessos consecutivos. Créditos e links diretos são exibidos
-          no app junto ao conteúdo resumido.
-        </ThemedText>
         <View style={styles.actions}>
           <ExternalLink href="https://santo.cancaonova.com/">
             <ThemedText type="link">Santo do Dia – Canção Nova</ThemedText>
           </ExternalLink>
         </View>
-        <ThemedText style={styles.cardNote}>
-          • O cache é renovado diariamente e limpo automaticamente para garantir que novas
-          biografias sejam carregadas com pontualidade.
-        </ThemedText>
       </FeatureCard>
 
       <FeatureCard title="Jejum e Abstinência">
-        <ThemedText style={styles.cardText}>
-          Para orientar os fiéis nos tempos penitenciais, indicamos as normas oficiais da
-          Conferência Nacional dos Bispos do Brasil (CNBB), que destacam a obrigatoriedade
-          da abstinência de carne às sextas-feiras da Quaresma e o jejum na Quarta-feira de
-          Cinzas e na Sexta-feira Santa para maiores de 18 e menores de 60 anos.
-        </ThemedText>
-        <ThemedText style={styles.cardText}>
-          Recomendamos também iniciativas paroquiais para adaptar o jejum às realidades
-          locais, sempre incentivando acompanhamento espiritual e a prática de obras de
-          caridade como parte do compromisso penitencial.
-        </ThemedText>
         <View style={styles.actions}>
-          <ExternalLink href="https://www.cnbb.org.br/"> 
+          <ExternalLink href="https://www.cnbb.org.br/">
             <ThemedText type="link">Orientações sobre jejum – CNBB</ThemedText>
           </ExternalLink>
           <ExternalLink href="https://www.vatican.va/content/francesco/pt/messages/lent.html">
             <ThemedText type="link">Mensagens de Quaresma do Papa</ThemedText>
           </ExternalLink>
         </View>
-        <ThemedText style={styles.cardNote}>
-          • Incentivamos o uso de lembretes e notas no aplicativo para registrar os propósitos
-          pessoais de jejum e práticas de caridade, fortalecendo a vivência comunitária.
-        </ThemedText>
       </FeatureCard>
 
       <FeatureCard title="Documentos e Liturgia (Vaticano)">
-        <ThemedText style={styles.cardText}>
-          Direcionamos os usuários para o portal oficial do Vaticano, garantindo acesso
-          direto às constituições, homilias e textos litúrgicos publicados pela Santa Sé
-          no site original.
-        </ThemedText>
-        <ThemedText style={styles.cardText}>
-          Também destacamos as notícias em português do Vatican News, atualizadas pela
-          própria Santa Sé. Ambos os canais são abertos no navegador do dispositivo para
-          respeitar as diretrizes de acesso e funcionamento de cada site.
-        </ThemedText>
         <View style={styles.actions}>
           <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
             <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
@@ -186,13 +137,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: Fonts.serif,
-  },
-  cardText: {
-    lineHeight: 20,
-  },
-  cardNote: {
-    lineHeight: 20,
-    fontStyle: 'italic',
   },
   actions: {
     flexDirection: 'row',
