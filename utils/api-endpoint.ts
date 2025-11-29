@@ -14,8 +14,8 @@ const trim = (value?: string | null) => {
 
 const resolveBase = () => {
   const candidates = [
-    process.env.EXPO_PUBLIC_API_BASE_URL,
     process.env.EXPO_PUBLIC_CHAT_BASE_URL,
+    process.env.EXPO_PUBLIC_API_BASE_URL,
     process.env.EXPO_PUBLIC_SITE_URL,
   ];
 
