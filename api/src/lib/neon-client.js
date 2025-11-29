@@ -48,7 +48,10 @@ class NeonClient {
 
     this.mode = 'data-api';
     this.baseUrl = normalizeBaseUrl(parsed.toString());
-    this.queryEndpoint = new URL('./query', this.baseUrl).toString();
+    // Neon exposes the SQL endpoint one level above the REST base (e.g. /neondb/query),
+    // so we intentionally move up a directory from the /rest/v1 base instead of nesting
+    // under it. Using "./query" would incorrectly target /rest/v1/query and return 404s.
+    this.queryEndpoint = new URL('../query', this.baseUrl).toString();
     this.apiKey = dataApiKey;
   }
 
