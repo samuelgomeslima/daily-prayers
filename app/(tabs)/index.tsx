@@ -20,65 +20,67 @@ export default function HomeScreen() {
 
   return (
     <ParallaxScrollView>
-      <ThemedView style={styles.titleContainer}>
-        <HolySpiritSymbol size={110} opacity={0.22} style={styles.titleSymbol} />
-        <ThemedText type="title" style={styles.title}>
-          Conteúdo litúrgico oficial
-        </ThemedText>
-        <ThemedText style={styles.lead}>
-          Resumo das integrações aprovadas para disponibilizar leituras, ofício diário,
-          santos e horários de celebrações no aplicativo.
-        </ThemedText>
-      </ThemedView>
+      <View style={styles.content}>
+        <ThemedView style={styles.titleContainer}>
+          <HolySpiritSymbol size={110} opacity={0.22} style={styles.titleSymbol} />
+          <ThemedText type="title" style={styles.title}>
+            Conteúdo litúrgico oficial
+          </ThemedText>
+          <ThemedText style={styles.lead}>
+            Resumo das integrações aprovadas para disponibilizar leituras, ofício diário,
+            santos e horários de celebrações no aplicativo.
+          </ThemedText>
+        </ThemedView>
 
-      <FeatureCard title="Liturgia Diária (Brasil)">
-        <View style={styles.actions}>
-          <ExternalLink href="https://liturgia.cancaonova.com/pb/">
-            <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
-          </ExternalLink>
-        </View>
-      </FeatureCard>
+        <FeatureCard title="Liturgia Diária (Brasil)">
+          <View style={styles.actions}>
+            <ExternalLink href="https://liturgia.cancaonova.com/pb/">
+              <ThemedText type="link">liturgia.cancaonova.com</ThemedText>
+            </ExternalLink>
+          </View>
+        </FeatureCard>
 
-      <FeatureCard title="Horários de Missas e Confissões">
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.missadiariabh.com/missadiaria">
-            <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.missadiariabh.com/confissoes">
-            <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
-          </ExternalLink>
-        </View>
-      </FeatureCard>
+        <FeatureCard title="Horários de Missas e Confissões">
+          <View style={styles.actions}>
+            <ExternalLink href="https://www.missadiariabh.com/missadiaria">
+              <ThemedText type="link">Missas – missadiariabh.com</ThemedText>
+            </ExternalLink>
+            <ExternalLink href="https://www.missadiariabh.com/confissoes">
+              <ThemedText type="link">Confissões – missadiariabh.com</ThemedText>
+            </ExternalLink>
+          </View>
+        </FeatureCard>
 
-      <FeatureCard title="Santo do Dia">
-        <View style={styles.actions}>
-          <ExternalLink href="https://santo.cancaonova.com/">
-            <ThemedText type="link">Santo do Dia – Canção Nova</ThemedText>
-          </ExternalLink>
-        </View>
-      </FeatureCard>
+        <FeatureCard title="Santo do Dia">
+          <View style={styles.actions}>
+            <ExternalLink href="https://santo.cancaonova.com/">
+              <ThemedText type="link">Santo do Dia – Canção Nova</ThemedText>
+            </ExternalLink>
+          </View>
+        </FeatureCard>
 
-      <FeatureCard title="Jejum e Abstinência">
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.cnbb.org.br/">
-            <ThemedText type="link">Orientações sobre jejum – CNBB</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.vatican.va/content/francesco/pt/messages/lent.html">
-            <ThemedText type="link">Mensagens de Quaresma do Papa</ThemedText>
-          </ExternalLink>
-        </View>
-      </FeatureCard>
+        <FeatureCard title="Jejum e Abstinência">
+          <View style={styles.actions}>
+            <ExternalLink href="https://www.cnbb.org.br/">
+              <ThemedText type="link">Orientações sobre jejum – CNBB</ThemedText>
+            </ExternalLink>
+            <ExternalLink href="https://www.vatican.va/content/francesco/pt/messages/lent.html">
+              <ThemedText type="link">Mensagens de Quaresma do Papa</ThemedText>
+            </ExternalLink>
+          </View>
+        </FeatureCard>
 
-      <FeatureCard title="Documentos e Liturgia (Vaticano)">
-        <View style={styles.actions}>
-          <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
-            <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
-          </ExternalLink>
-          <ExternalLink href="https://www.vaticannews.va/pt.html">
-            <ThemedText type="link">Vatican News em português</ThemedText>
-          </ExternalLink>
-        </View>
-      </FeatureCard>
+        <FeatureCard title="Documentos e Liturgia (Vaticano)">
+          <View style={styles.actions}>
+            <ExternalLink href="https://www.vatican.va/content/vatican/pt.html">
+              <ThemedText type="link">Portal oficial do Vaticano</ThemedText>
+            </ExternalLink>
+            <ExternalLink href="https://www.vaticannews.va/pt.html">
+              <ThemedText type="link">Vatican News em português</ThemedText>
+            </ExternalLink>
+          </View>
+        </FeatureCard>
+      </View>
     </ParallaxScrollView>
   );
 }
@@ -107,9 +109,12 @@ function FeatureCard({ title, children }: FeatureCardProps) {
 }
 
 const styles = StyleSheet.create({
+  content: {
+    gap: 12,
+  },
   titleContainer: {
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 8,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -125,10 +130,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 8,
-    gap: 6,
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 6,
+    gap: 5,
     borderWidth: StyleSheet.hairlineWidth,
     shadowOpacity: 0.2,
     shadowRadius: 12,
