@@ -31,6 +31,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `EXPO_PUBLIC_CHAT_BASE_URL` (**required**) – full URL of your deployed Static Web App (e.g. `https://white-ground-0a882961e.1.azurestaticapps.net/`).
    - `EXPO_PUBLIC_API_BASE_URL` (optional) – fallback base URL if the chat URL is not defined.
    - `EXPO_PUBLIC_SITE_URL` (optional) – secondary fallback used in development builds.
+
+   The runtime now resolves these endpoints in a strict order: **chat first, then API, then site**. If you define multiple values, the app always uses `EXPO_PUBLIC_CHAT_BASE_URL` when present. When that value is missing, it falls back to `EXPO_PUBLIC_API_BASE_URL`, and only uses `EXPO_PUBLIC_SITE_URL` if both other variables are absent.
    - `EXPO_PUBLIC_CATECHIST_BASE_URL` (optional) – dedicated endpoint for the catechist agent; defaults to the chat base URL when omitted.
 
    If you plan to run the Azure Functions locally, copy the API template and provide the required credentials.
