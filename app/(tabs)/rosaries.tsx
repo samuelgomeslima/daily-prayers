@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: 32,
-    gap: 16,
+    gap: 14,
   },
   sectionTitle: {
     fontSize: 22,
@@ -521,11 +521,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   sequenceCard: {
-    marginTop: 20,
+    marginTop: 12,
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
-    gap: 16,
+    gap: 12,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 24,
     shadowOpacity: 0.08,

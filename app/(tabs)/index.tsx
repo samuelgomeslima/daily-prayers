@@ -109,7 +109,7 @@ function FeatureCard({ title, children }: FeatureCardProps) {
 const styles = StyleSheet.create({
   titleContainer: {
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderRadius: 16,
-    marginBottom: 12,
-    gap: 8,
+    marginBottom: 8,
+    gap: 6,
     borderWidth: StyleSheet.hairlineWidth,
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -141,6 +141,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
 });
