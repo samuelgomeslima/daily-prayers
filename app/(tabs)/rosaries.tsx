@@ -511,8 +511,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   section: {
-    marginTop: 26,
-    gap: 10,
+    marginTop: 24,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 22,
@@ -521,11 +521,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   sequenceCard: {
-    marginTop: 8,
+    marginTop: 6,
     borderWidth: 1,
     borderRadius: 18,
-    padding: 16,
-    gap: 10,
+    padding: 14,
+    gap: 8,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 24,
     shadowOpacity: 0.08,
@@ -534,11 +534,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   sequenceHeaderText: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   sequenceTitle: {
     fontSize: 20,
