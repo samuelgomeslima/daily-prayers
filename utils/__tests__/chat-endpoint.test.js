@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   resolveChatEndpoint,
-  _internal: { resolveExpoHost },
+  _internal: { extractHost, resolveExpoHost },
 } = require('../chat-endpoint.js');
 
 function mergeDeep(target, source) {
@@ -153,5 +153,24 @@ describe('resolveExpoHost', () => {
     });
 
     assert.strictEqual(resolveExpoHost(constants), 'example.com');
+  });
+});
+
+describe('_internal.extractHost', () => {
+  it('returns the hostname from URLs that include path segments', () => {
+    assert.strictEqual(extractHost('http://example.com/some/path'), 'example.com');
+    assert.strictEqual(extractHost('example.com:19000/some/path'), 'example.com');
+  });
+
+  it('treats host values without protocols as HTTP URLs', () => {
+    assert.strictEqual(extractHost('localhost:3000'), 'localhost');
+    assert.strictEqual(extractHost('sub.domain.test/with/path'), 'sub.domain.test');
+  });
+
+  it('returns null for falsy or malformed values', () => {
+    assert.strictEqual(extractHost(''), null);
+    assert.strictEqual(extractHost(null), null);
+    assert.strictEqual(extractHost('::::'), null);
+    assert.strictEqual(extractHost('http://'), null);
   });
 });
