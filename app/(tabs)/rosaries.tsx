@@ -394,7 +394,7 @@ export default function RosariesScreen() {
       </ThemedView>
 
       <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}> 
+        <ThemedText type="subtitle" style={[styles.sectionTitle, { fontFamily: Fonts.serif }]}>
           Contadores interativos
         </ThemedText>
         <ThemedText style={styles.sectionDescription}>
@@ -494,8 +494,8 @@ export default function RosariesScreen() {
 
 const styles = StyleSheet.create({
   titleContainer: {
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 18,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -511,8 +511,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   section: {
-    marginTop: 32,
-    gap: 14,
+    marginTop: 26,
+    gap: 10,
   },
   sectionTitle: {
     fontSize: 22,
@@ -521,11 +521,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   sequenceCard: {
-    marginTop: 12,
+    marginTop: 8,
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
-    gap: 12,
+    borderRadius: 18,
+    padding: 16,
+    gap: 10,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 24,
     shadowOpacity: 0.08,
@@ -534,11 +534,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 12,
   },
   sequenceHeaderText: {
     flex: 1,
-    gap: 8,
+    gap: 6,
   },
   sequenceTitle: {
     fontSize: 20,
