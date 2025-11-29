@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { bilingualPrayers, type BilingualPrayer } from '@/constants/bilingual-prayers';
+import { spacing } from '@/constants/spacing';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -218,8 +219,8 @@ export default function PrayersScreen() {
 
 const styles = StyleSheet.create({
   titleContainer: {
-    gap: 12,
-    marginBottom: 18,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -235,8 +236,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   prayerList: {
-    gap: 10,
-    marginTop: 4,
+    gap: spacing.md,
+    marginTop: spacing.xs,
   },
   prayerPressable: {
     borderRadius: 16,
@@ -247,18 +248,18 @@ const styles = StyleSheet.create({
   prayerCard: {
     borderWidth: 1,
     borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 14,
     shadowOpacity: 0.07,
-    gap: 6,
+    gap: spacing.sm,
   },
   prayerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   prayerTitle: {
     fontSize: 18,
@@ -271,14 +272,14 @@ const styles = StyleSheet.create({
   },
   languageToggleContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
   languageToggleButton: {
     flex: 1,
     borderRadius: 999,
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -291,21 +292,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   iconButton: {
-    padding: 8,
+    padding: spacing.sm,
     borderRadius: 999,
   },
   searchContainer: {
     borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
   },
   searchInput: {
     fontSize: 16,
   },
   emptyState: {
-    marginTop: 24,
-    padding: 18,
+    marginTop: spacing.xxl,
+    padding: spacing.xl,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -318,13 +319,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing.xxl,
   },
   modalContainer: {
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
     maxHeight: '85%',
     shadowColor: '#000',
     shadowOpacity: 0.2,
@@ -336,14 +337,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: spacing.md,
+    gap: spacing.md,
   },
   modalTitle: {
     fontSize: 20,
     flex: 1,
   },
   modalContent: {
-    paddingBottom: 16,
+    paddingBottom: spacing.lg,
   },
 });

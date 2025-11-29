@@ -6,6 +6,7 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { HolySpiritSymbol } from '@/components/holy-spirit-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { spacing } from '@/constants/spacing';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -110,11 +111,11 @@ function FeatureCard({ title, children }: FeatureCardProps) {
 
 const styles = StyleSheet.create({
   content: {
-    gap: 8,
+    gap: spacing.md,
   },
   titleContainer: {
-    gap: 5,
-    marginBottom: 6,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -130,10 +131,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    padding: 12,
+    padding: spacing.md,
     borderRadius: 14,
-    marginBottom: 4,
-    gap: 4,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -146,6 +147,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: spacing.sm,
   },
 });
