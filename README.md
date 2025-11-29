@@ -49,9 +49,11 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    - `FILE_SEARCH_TOOL` (optional) – ID of a configured file search tool for the catechist agent.
    - `OPENAI_TRANSCRIBE_MODEL` (optional) – defaults to `gpt-4o-mini-transcribe`.
    - `OPENAI_PROXY_TOKEN` (optional) – token required to call the transcription proxy when set.
-  - `NEON_DATABASE_URL` (**required for the notas module when using direct SQL access**) – Postgres connection string provided by Neon (e.g. `postgres://USER:PASSWORD@ep-restful-12345.us-east-1.aws.neon.tech/neondb`).
-  - `NEON_DATA_API_URL` (optional) – Neon Data API endpoint such as `https://<your-endpoint>/neondb/rest/v1`. When this is set the API will automatically route all database reads and writes through Neon’s Data API instead of the classic SQL-over-HTTP endpoint.
-  - `NEON_DATA_API_KEY` (optional) – API key generated in the Neon dashboard. Required when `NEON_DATA_API_URL` is defined.
+   - `NEON_DATABASE_URL` (**required for the notas module when using direct SQL access**) – Postgres connection string provided by Neon (e.g. `postgres://USER:PASSWORD@ep-restful-12345.us-east-1.aws.neon.tech/neondb`).
+   - `NEON_DATA_API_URL` (optional) – Neon Data API endpoint such as `https://<your-endpoint>/neondb/rest/v1`. When this is set the API will automatically route all database reads and writes through Neon’s Data API instead of the classic SQL-over-HTTP endpoint.
+   - `NEON_DATA_API_KEY` (optional) – API key generated in the Neon dashboard. Required when `NEON_DATA_API_URL` is defined.
+
+   > These Neon variables belong in `api/local.settings.json` (and your production environment configuration). They are included in `.env.example` as a reference checklist but are not read by the Expo client.
 
    The API expects the connection string to include user, password, host and database. Neon already enforces TLS; keep the `sslmode=require` suffix if it is present in the generated URL.
 
