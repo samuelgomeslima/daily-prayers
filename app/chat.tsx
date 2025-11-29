@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -37,8 +37,6 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 
 const SYSTEM_PROMPT = `Você é um assistente católico chamado "Companheiro de Fé". Responda sempre com fidelidade ao magistério da Igreja, cite referências litúrgicas quando possível e ofereça sugestões de orações, novenas, terços e estudos de aprofundamento. Traga indicações pastorais com tom acolhedor e respeitoso.`;
 
-const CHAT_ENDPOINT = resolveChatEndpoint();
-
 export default function ChatScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
@@ -49,6 +47,10 @@ export default function ChatScreen() {
 
   const palette = Colors[colorScheme];
   const { chatModel } = useModelSettings();
+  const chatEndpoint = useMemo(
+    () => resolveChatEndpoint({ env: { ...process.env, EXPO_OS: Platform.OS } }),
+    []
+  );
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
@@ -56,8 +58,8 @@ export default function ChatScreen() {
     if (!trimmed) {
       return;
     }
-    
-    const endpoint = CHAT_ENDPOINT;
+
+    const endpoint = chatEndpoint;
 
     if (!endpoint) {
       setMessages((prev) => [
@@ -172,7 +174,7 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [chatModel, input, messages]);
+  }, [chatEndpoint, chatModel, input, messages]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
