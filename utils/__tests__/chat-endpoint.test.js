@@ -49,6 +49,12 @@ describe('resolveChatEndpoint', () => {
     assert.strictEqual(result, 'https://chat.example.com/api/chat');
   });
 
+  it('normalizes trailing slashes in EXPO_PUBLIC_CHAT_BASE_URL', () => {
+    const env = { EXPO_PUBLIC_CHAT_BASE_URL: 'https://chat.example.com/' };
+    const result = resolveChatEndpoint({ env });
+    assert.strictEqual(result, 'https://chat.example.com/api/chat');
+  });
+
   it('falls back to EXPO_PUBLIC_API_BASE_URL when chat base is absent', () => {
     const env = { EXPO_PUBLIC_API_BASE_URL: 'https://api.example.com' };
     const result = resolveChatEndpoint({ env });
