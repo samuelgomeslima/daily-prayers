@@ -114,7 +114,7 @@ export default function SettingsScreen() {
       safeSetAvailability({
         status: 'unavailable',
         message:
-          'O endpoint da IA não está configurado. Defina EXPO_PUBLIC_CHAT_BASE_URL antes de usar os assistentes.',
+          'O endpoint da IA não está configurado. Defina EXPO_PUBLIC_CHAT_BASE_URL, EXPO_PUBLIC_API_BASE_URL ou EXPO_PUBLIC_SITE_URL antes de usar os assistentes.',
         kind: 'config',
       });
       return;
@@ -349,8 +349,8 @@ export default function SettingsScreen() {
                 lightColor="#6B7280"
                 darkColor="#9CA3AF"
               >
-                Configure a variável EXPO_PUBLIC_CHAT_BASE_URL na build do aplicativo para
-                habilitar os assistentes.
+                Configure as variáveis EXPO_PUBLIC_CHAT_BASE_URL, EXPO_PUBLIC_API_BASE_URL ou
+                EXPO_PUBLIC_SITE_URL na build do aplicativo para habilitar os assistentes.
               </ThemedText>
             ) : null}
           </View>
