@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ROSARY_MYSTERY_SETS, type MysterySet } from '@/constants/rosary';
+import { spacing } from '@/constants/spacing';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -494,8 +495,8 @@ export default function RosariesScreen() {
 
 const styles = StyleSheet.create({
   titleContainer: {
-    gap: 10,
-    marginBottom: 18,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -511,8 +512,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   section: {
-    marginTop: 24,
-    gap: 8,
+    marginTop: spacing.xxl,
+    gap: spacing.md,
   },
   sectionTitle: {
     fontSize: 22,
@@ -521,11 +522,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   sequenceCard: {
-    marginTop: 6,
+    marginTop: spacing.sm,
     borderWidth: 1,
     borderRadius: 18,
-    padding: 14,
-    gap: 8,
+    padding: spacing.lg,
+    gap: spacing.md,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 24,
     shadowOpacity: 0.08,
@@ -534,11 +535,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.md,
   },
   sequenceHeaderText: {
     flex: 1,
-    gap: 4,
+    gap: spacing.sm,
   },
   sequenceTitle: {
     fontSize: 20,
@@ -553,24 +554,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#00000066',
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   modalContainer: {
     borderRadius: 24,
-    padding: 20,
-    gap: 16,
+    padding: spacing.xl,
+    gap: spacing.lg,
     maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 16,
+    gap: spacing.lg,
   },
   modalCloseButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   modalContent: {
-    paddingBottom: 20,
+    paddingBottom: spacing.xl,
   },
 });
