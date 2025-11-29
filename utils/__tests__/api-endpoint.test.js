@@ -99,6 +99,14 @@ describe('buildApiUrl', () => {
     assert.strictEqual(result, 'https://api.example.com/api/prayers/today');
   });
 
+  it('uses the site URL as the final fallback when no override is provided', () => {
+    process.env.EXPO_PUBLIC_SITE_URL = 'https://site.example.com/';
+
+    const result = buildApiUrl('prayers/today');
+
+    assert.strictEqual(result, 'https://site.example.com/api/prayers/today');
+  });
+
   it('returns null when no base URL is available', () => {
     const result = buildApiUrl('prayers/today');
 
