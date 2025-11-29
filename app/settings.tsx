@@ -266,10 +266,7 @@ export default function SettingsScreen() {
           <ThemedText type="title" style={styles.heading}>
             Configurações
           </ThemedText>
-          <ThemedText style={[styles.intro, { color: mutedText }]}>
-            Personalize quais modelos de IA serão utilizados nos assistentes do
-            aplicativo.
-          </ThemedText>
+          <ThemedText style={[styles.intro, { color: mutedText }]}>Personalize quais modelos de IA serão utilizados nos assistentes do aplicativo.</ThemedText>
 
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
