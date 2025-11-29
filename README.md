@@ -67,7 +67,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    > Se preferir usar o console online da Neon, cole o conteúdo do arquivo `schema.sql` diretamente no editor SQL e execute o script.
 
 3. Defina as variáveis `NEON_DATABASE_URL` **ou** (`NEON_DATA_API_URL` + `NEON_DATA_API_KEY`) no ambiente das Azure Functions (localmente em `api/local.settings.json` e no portal do Azure/Static Web Apps para produção).
-4. Configure `EXPO_PUBLIC_API_BASE_URL` apontando para a URL pública do aplicativo (a mesma utilizada para o chat). A aplicação móvel consumirá os endpoints REST abaixo:
+4. Configure `EXPO_PUBLIC_API_BASE_URL` apontando para a URL pública do aplicativo (a mesma utilizada para o chat). Se múltiplas variáveis forem definidas, o aplicativo usará, nesta ordem, `EXPO_PUBLIC_CHAT_BASE_URL`, depois `EXPO_PUBLIC_API_BASE_URL` e, por fim, `EXPO_PUBLIC_SITE_URL`. A aplicação móvel consumirá os endpoints REST abaixo:
 
    - `POST /api/users/register` – cria usuários e retorna o token de sessão;
    - `POST /api/users/login` – autentica e renova o token;
