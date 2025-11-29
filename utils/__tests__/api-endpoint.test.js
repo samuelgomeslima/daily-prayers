@@ -26,7 +26,7 @@ function loadApiEndpoint() {
   return loadedModule.exports;
 }
 
-const { resolveApiBaseUrl } = loadApiEndpoint();
+const { resolveApiBaseUrl, buildApiUrl } = loadApiEndpoint();
 
 const ENV_KEYS = [
   'EXPO_PUBLIC_API_BASE_URL',
@@ -61,5 +61,47 @@ describe('resolveBase (via resolveApiBaseUrl)', () => {
     const result = resolveApiBaseUrl();
 
     assert.strictEqual(result, 'https://chat.example.com');
+  });
+
+  it('trims whitespace and trailing slashes for the first available base URL', () => {
+    process.env.EXPO_PUBLIC_CHAT_BASE_URL = '  https://chat.example.com///  ';
+
+    const result = resolveApiBaseUrl();
+
+    assert.strictEqual(result, 'https://chat.example.com');
+  });
+
+  it('returns null when none of the environment variables are set', () => {
+    const result = resolveApiBaseUrl();
+
+    assert.strictEqual(result, null);
+  });
+});
+
+describe('buildApiUrl', () => {
+  it('uses a trimmed override and appends /api when missing', () => {
+    const result = buildApiUrl('status', ' https://api.example.com/');
+
+    assert.strictEqual(result, 'https://api.example.com/api/status');
+  });
+
+  it('does not duplicate the /api suffix', () => {
+    const result = buildApiUrl('/status', 'https://api.example.com/api/');
+
+    assert.strictEqual(result, 'https://api.example.com/api/status');
+  });
+
+  it('uses the resolved base URL when no override is provided', () => {
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.example.com/';
+
+    const result = buildApiUrl('prayers/today');
+
+    assert.strictEqual(result, 'https://api.example.com/api/prayers/today');
+  });
+
+  it('returns null when no base URL is available', () => {
+    const result = buildApiUrl('prayers/today');
+
+    assert.strictEqual(result, null);
   });
 });

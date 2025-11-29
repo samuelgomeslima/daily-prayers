@@ -9,7 +9,7 @@ const trim = (value?: string | null) => {
     return null;
   }
 
-  return trimmed.replace(/\/$/, '');
+  return trimmed.replace(/\/+$/, '');
 };
 
 const resolveBase = () => {
@@ -42,7 +42,7 @@ export function buildApiUrl(path: string, baseOverride?: string | null) {
   }
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const sanitizedBase = base.replace(/\/$/, '');
+  const sanitizedBase = base.replace(/\/+$/, '');
 
   if (sanitizedBase.endsWith('/api')) {
     return `${sanitizedBase}${normalizedPath}`;
